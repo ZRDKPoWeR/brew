@@ -36,7 +36,7 @@ end
 gem "activesupport"
 gem "concurrent-ruby"
 gem "did_you_mean" # remove when HOMEBREW_REQUIRED_RUBY_VERSION >= 2.7
-gem "mechanize"
+gem "mechanize", ">= 2.8.5"
 gem "patchelf"
 gem "plist"
 gem "rubocop-performance"
