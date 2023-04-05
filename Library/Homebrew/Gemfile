@@ -33,10 +33,10 @@ group :sorbet, optional: true do
 end
 
 # vendored gems
-gem "activesupport"
+gem "activesupport", ">= 6.1.7.3"
 gem "concurrent-ruby"
 gem "did_you_mean" # remove when HOMEBREW_REQUIRED_RUBY_VERSION >= 2.7
-gem "mechanize"
+gem "mechanize", ">= 2.8.5"
 gem "patchelf"
 gem "plist"
 gem "rubocop-performance"
