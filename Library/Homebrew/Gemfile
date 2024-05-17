@@ -18,7 +18,7 @@ gem "rspec-its", require: false
 gem "rspec_junit_formatter", require: false
 gem "rspec-retry", require: false
 gem "rspec-wait", require: false
-gem "rubocop", require: false
+gem "rubocop", ">= 1.24.0", require: false
 gem "rubocop-ast", require: false
 gem "simplecov", require: false
 gem "simplecov-cobertura", require: false
@@ -39,9 +39,9 @@ gem "did_you_mean" # remove when HOMEBREW_REQUIRED_RUBY_VERSION >= 2.7
 gem "mechanize"
 gem "patchelf"
 gem "plist"
-gem "rubocop-performance"
-gem "rubocop-rails"
-gem "rubocop-rspec"
-gem "rubocop-sorbet"
+gem "rubocop-performance", ">= 1.13.0"
+gem "rubocop-rails", ">= 2.13.0"
+gem "rubocop-rspec", ">= 2.7.0"
+gem "rubocop-sorbet", ">= 0.6.3"
 gem "ruby-macho"
 gem "sorbet-runtime-stub"
