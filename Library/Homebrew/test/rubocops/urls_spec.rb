@@ -1,12 +1,11 @@
-# typed: false
 # frozen_string_literal: true
 
 require "rubocops/urls"
 
-describe RuboCop::Cop::FormulaAudit::Urls do
+RSpec.describe RuboCop::Cop::FormulaAudit::Urls do
   subject(:cop) { described_class.new }
 
-  let(:offense_list) {
+  let(:offense_list) do
     [{
       "url" => "https://ftpmirror.gnu.org/lightning/lightning-2.1.0.tar.gz",
       "msg" => 'Please use "https://ftp.gnu.org/gnu/lightning/lightning-2.1.0.tar.gz" instead of https://ftpmirror.gnu.org/lightning/lightning-2.1.0.tar.gz.',
@@ -64,10 +63,8 @@ describe RuboCop::Cop::FormulaAudit::Urls do
       "col" => 2,
     }, {
       "url" => "http://prdownloads.sourceforge.net/foo/foo-1.tar.gz",
-      "msg" => <<~EOS.chomp,
-        Don't use prdownloads in SourceForge urls (url is http://prdownloads.sourceforge.net/foo/foo-1.tar.gz).
-                See: http://librelist.com/browser/homebrew/2011/1/12/prdownloads-is-bad/
-      EOS
+      "msg" => "Don't use prdownloads in SourceForge urls " \
+               "(url is http://prdownloads.sourceforge.net/foo/foo-1.tar.gz).",
       "col" => 2,
     }, {
       "url" => "http://foo.dl.sourceforge.net/sourceforge/foozip/foozip_1.0.tar.bz2",
@@ -181,7 +178,7 @@ describe RuboCop::Cop::FormulaAudit::Urls do
       "msg" => "Use of the svn+http:// scheme is deprecated, pass `:using => :svn` instead",
       "col" => 2,
     }]
-  }
+  end
 
   context "when auditing URLs" do
     it "reports all offenses in `offense_list`" do
@@ -194,11 +191,11 @@ describe RuboCop::Cop::FormulaAudit::Urls do
             url "#{offense_info["url"]}"
           end
         RUBY
-        expected_offenses = [{ message:  offense_info["msg"],
+        expected_offenses = [{ message:  "FormulaAudit/Urls: #{offense_info["msg"]}",
                                severity: :convention,
                                line:     3,
                                column:   offense_info["col"],
-                               source:   source }]
+                               source: }]
 
         offenses = inspect_source(source)
 
@@ -219,7 +216,7 @@ describe RuboCop::Cop::FormulaAudit::Urls do
 
           stable do
             url "git://github.com/foo.git",
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Please use https:// for git://github.com/foo.git
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Urls: Please use https:// for git://github.com/foo.git
                 :tag => "v1.0.1",
                 :revision => "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             version "1.0.1"
@@ -234,7 +231,7 @@ describe RuboCop::Cop::FormulaAudit::Urls do
           desc "foo"
           url "https://ftpmirror.fnu.org/foo/foo-1.0.tar.gz"
           mirror "https://ftpmirror.fnu.org/foo/foo-1.0.tar.gz"
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ URL should not be duplicated as a mirror: https://ftpmirror.fnu.org/foo/foo-1.0.tar.gz
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Urls: URL should not be duplicated as a mirror: https://ftpmirror.fnu.org/foo/foo-1.0.tar.gz
         end
       RUBY
     end

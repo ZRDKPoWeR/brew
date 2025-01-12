@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "rubocops/class"
 
-describe RuboCop::Cop::FormulaAudit::ClassName do
+RSpec.describe RuboCop::Cop::FormulaAudit::ClassName do
   subject(:cop) { described_class.new }
 
   corrected_source = <<~RUBY
@@ -15,7 +14,7 @@ describe RuboCop::Cop::FormulaAudit::ClassName do
   it "reports and corrects an offense when using ScriptFileFormula" do
     expect_offense(<<~RUBY)
       class Foo < ScriptFileFormula
-                  ^^^^^^^^^^^^^^^^^ ScriptFileFormula is deprecated, use Formula instead
+                  ^^^^^^^^^^^^^^^^^ FormulaAudit/ClassName: ScriptFileFormula is deprecated, use Formula instead
         url 'https://brew.sh/foo-1.0.tgz'
       end
     RUBY
@@ -25,7 +24,7 @@ describe RuboCop::Cop::FormulaAudit::ClassName do
   it "reports and corrects an offense when using GithubGistFormula" do
     expect_offense(<<~RUBY)
       class Foo < GithubGistFormula
-                  ^^^^^^^^^^^^^^^^^ GithubGistFormula is deprecated, use Formula instead
+                  ^^^^^^^^^^^^^^^^^ FormulaAudit/ClassName: GithubGistFormula is deprecated, use Formula instead
         url 'https://brew.sh/foo-1.0.tgz'
       end
     RUBY
@@ -35,7 +34,7 @@ describe RuboCop::Cop::FormulaAudit::ClassName do
   it "reports and corrects an offense when using AmazonWebServicesFormula" do
     expect_offense(<<~RUBY)
       class Foo < AmazonWebServicesFormula
-                  ^^^^^^^^^^^^^^^^^^^^^^^^ AmazonWebServicesFormula is deprecated, use Formula instead
+                  ^^^^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/ClassName: AmazonWebServicesFormula is deprecated, use Formula instead
         url 'https://brew.sh/foo-1.0.tgz'
       end
     RUBY

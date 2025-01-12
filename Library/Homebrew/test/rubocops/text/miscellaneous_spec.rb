@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "rubocops/lines"
 
-describe RuboCop::Cop::FormulaAudit::Miscellaneous do
+RSpec.describe RuboCop::Cop::FormulaAudit::Miscellaneous do
   subject(:cop) { described_class.new }
 
   context "when auditing formula miscellany" do
@@ -13,7 +12,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           FileUtils.mv "hello"
-          ^^^^^^^^^^^^^^^^^^^^ Don\'t need \'FileUtils.\' before mv
+          ^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Don't need 'FileUtils.' before mv
         end
       RUBY
     end
@@ -24,7 +23,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           inreplace "foo" do |longvar|
-          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ \"inreplace <filenames> do |s|\" is preferred over \"|longvar|\".
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: "inreplace <filenames> do |s|" is preferred over "|longvar|".
             somerandomCall(longvar)
           end
         end
@@ -38,7 +37,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           bottle do
             rebuild 0
-            ^^^^^^^^^ 'rebuild 0' should be removed
+            ^^^^^^^^^ FormulaAudit/Miscellaneous: 'rebuild 0' should be removed
             sha256 "fe0679b932dd43a87fd415b609a7fbac7a069d117642ae8ebaac46ae1fb9f0b3" => :sierra
           end
         end
@@ -54,7 +53,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
             sha256 "fe0679b932dd43a87fd415b609a7fbac7a069d117642ae8ebaac46ae1fb9f0b3" => :sierra
           end
           fails_with :llvm do
-          ^^^^^^^^^^^^^^^^ 'fails_with :llvm' is now a no-op so should be removed
+          ^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: 'fails_with :llvm' is now a no-op so should be removed
             build 2335
             cause "foo"
           end
@@ -69,7 +68,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
 
           def test
-          ^^^^^^^^ Use new-style test definitions (test do)
+          ^^^^^^^^ FormulaAudit/Miscellaneous: Use new-style test definitions (test do)
             assert_equals "1", "1"
           end
         end
@@ -82,7 +81,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           skip_clean :all
-          ^^^^^^^^^^^^^^^ `skip_clean :all` is deprecated; brew no longer strips symbols. Pass explicit paths to prevent Homebrew from removing empty folders.
+          ^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: `skip_clean :all` is deprecated; brew no longer strips symbols. Pass explicit paths to prevent Homebrew from removing empty folders.
         end
       RUBY
     end
@@ -93,7 +92,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           if build.universal?
-             ^^^^^^^^^^^^^^^^ macOS has been 64-bit only since 10.6 so build.universal? is deprecated.
+             ^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: macOS has been 64-bit only since 10.6 so build.universal? is deprecated.
              "foo"
           end
         end
@@ -119,7 +118,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           if build?
              ENV.universal_binary
-             ^^^^^^^^^^^^^^^^^^^^ macOS has been 64-bit only since 10.6 so ENV.universal_binary is deprecated.
+             ^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: macOS has been 64-bit only since 10.6 so ENV.universal_binary is deprecated.
           end
         end
       RUBY
@@ -143,28 +142,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           system "install_name_tool", "-id"
-                 ^^^^^^^^^^^^^^^^^^^ Use ruby-macho instead of calling "install_name_tool"
-        end
-      RUBY
-    end
-
-    it "reports an offense when `npm install` is called without Language::Node arguments" do
-      expect_offense(<<~RUBY)
-        class Foo < Formula
-          desc "foo"
-          url 'https://brew.sh/foo-1.0.tgz'
-          system "npm", "install"
-          ^^^^^^^^^^^^^^^^^^^^^^^ Use Language::Node for npm install args
-        end
-      RUBY
-    end
-
-    it "reports no offenses when `npm install` is called without Language::Node arguments in an exempt formula" do
-      expect_no_offenses(<<~RUBY, "/homebrew-core/Formula/kibana@4.4.rb")
-        class KibanaAT44 < Formula
-          desc "foo"
-          url 'https://brew.sh/foo-1.0.tgz'
-          system "npm", "install"
+                 ^^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use ruby-macho instead of calling "install_name_tool"
         end
       RUBY
     end
@@ -175,7 +153,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on FOO::BAR.new
-                     ^^^^^^^^^^^^ `depends_on` can take requirement classes instead of instances
+                     ^^^^^^^^^^^^ FormulaAudit/Miscellaneous: `depends_on` can take requirement classes instead of instances
         end
       RUBY
     end
@@ -187,7 +165,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           rm_rf Dir["src/{llvm,test,librustdoc,etc/snapshot.pyc}"]
           rm_rf Dir["src/snapshot.pyc"]
-                    ^^^^^^^^^^^^^^^^^^ Dir(["src/snapshot.pyc"]) is unnecessary; just use "src/snapshot.pyc"
+                    ^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Dir(["src/snapshot.pyc"]) is unnecessary; just use "src/snapshot.pyc"
         end
       RUBY
     end
@@ -198,7 +176,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           system "mkdir", "foo"
-                 ^^^^^^^ Use the `mkdir` Ruby method instead of `system "mkdir", "foo"`
+                 ^^^^^^^ FormulaAudit/Miscellaneous: Use the `mkdir` Ruby method instead of `system "mkdir", "foo"`
         end
       RUBY
     end
@@ -206,7 +184,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
     it "reports an offense when top-level functions are defined outside of a class body" do
       expect_offense(<<~RUBY)
         def test
-        ^^^^^^^^ Define method test in the class body, not at the top-level
+        ^^^^^^^^ FormulaAudit/Miscellaneous: Define method test in the class body, not at the top-level
            nil
         end
         class Foo < Formula
@@ -223,7 +201,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             man1.install man+"man8" => "faad.1"
-                             ^^^^^^ "man+"man8"" should be "man8"
+                             ^^^^^^ FormulaAudit/Miscellaneous: "man+"man8"" should be "man8"
           end
         end
       RUBY
@@ -236,7 +214,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             system "/usr/bin/gcc", "foo"
-                   ^^^^^^^^^^^^^^ Use "#{ENV.cc}" instead of hard-coding "gcc"
+                   ^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use "#{ENV.cc}" instead of hard-coding "gcc"
           end
         end
       RUBY
@@ -249,20 +227,20 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             system "/usr/bin/g++", "-o", "foo", "foo.cc"
-                   ^^^^^^^^^^^^^^ Use "#{ENV.cxx}" instead of hard-coding "g++"
+                   ^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use "#{ENV.cxx}" instead of hard-coding "g++"
           end
         end
       RUBY
     end
 
-    it "reports an offense when a hard-coded `llvm-g++` is set as COMPILER_PATH" do
+    it "reports an offense when a hard-coded `c++` is set as COMPILER_PATH" do
       expect_offense(<<~'RUBY')
         class Foo < Formula
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           def install
-            ENV["COMPILER_PATH"] = "/usr/bin/llvm-g++"
-                                   ^^^^^^^^^^^^^^^^^^^ Use "#{ENV.cxx}" instead of hard-coding "llvm-g++"
+            ENV["COMPILER_PATH"] = "/usr/bin/c++"
+                                   ^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use "#{ENV.cxx}" instead of hard-coding "c++"
           end
         end
       RUBY
@@ -275,7 +253,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             ENV["COMPILER_PATH"] = "/usr/bin/gcc"
-                                   ^^^^^^^^^^^^^^ Use \"\#{ENV.cc}\" instead of hard-coding \"gcc\"
+                                   ^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use "\#{ENV.cc}" instead of hard-coding "gcc"
           end
         end
       RUBY
@@ -288,7 +266,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             mv "#{share}/man", share
-                        ^^^^ "#{share}/man" should be "#{man}"
+                        ^^^^ FormulaAudit/Miscellaneous: "#{share}/man" should be "#{man}"
           end
         end
       RUBY
@@ -301,7 +279,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             mv "#{prefix}/libexec", share
-                         ^^^^^^^^ "#{prefix}/libexec" should be "#{libexec}"
+                         ^^^^^^^^ FormulaAudit/Miscellaneous: "#{prefix}/libexec" should be "#{libexec}"
           end
         end
       RUBY
@@ -314,7 +292,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             system "./configure", "--INFODIR=#{prefix}/share/info"
-                                                      ^^^^^^^^^^^ "#{prefix}/share/info" should be "#{info}"
+                                                      ^^^^^^^^^^^ FormulaAudit/Miscellaneous: "#{prefix}/share/info" should be "#{info}"
           end
         end
       RUBY
@@ -327,7 +305,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           def install
             system "./configure", "--MANDIR=#{prefix}/share/man/man8"
-                                                     ^^^^^^^^^^^^^^^ "#{prefix}/share/man/man8" should be "#{man8}"
+                                                     ^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: "#{prefix}/share/man/man8" should be "#{man8}"
           end
         end
       RUBY
@@ -339,7 +317,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on "lpeg" => :lua51
-                               ^^^^^^ lua modules should be vendored rather than use deprecated `depends_on \"lpeg\" => :lua51`
+                               ^^^^^^ FormulaAudit/Miscellaneous: lua modules should be vendored rather than use deprecated `depends_on "lpeg" => :lua51`
         end
       RUBY
     end
@@ -350,7 +328,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           system "export", "var=value"
-                 ^^^^^^^^ Use ENV instead of invoking 'export' to modify the environment
+                 ^^^^^^^^ FormulaAudit/Miscellaneous: Use ENV instead of invoking 'export' to modify the environment
         end
       RUBY
     end
@@ -361,7 +339,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on "foo" => "with-bar"
-                              ^^^^^^^^^^ Dependency foo should not use option with-bar
+                              ^^^^^^^^^^ FormulaAudit/Miscellaneous: Dependency foo should not use option with-bar
         end
       RUBY
     end
@@ -373,9 +351,9 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on "httpd" => [:build, :test]
           depends_on "foo" => [:optional, "with-bar"]
-                                          ^^^^^^^^^^ Dependency foo should not use option with-bar
+                                          ^^^^^^^^^^ FormulaAudit/Miscellaneous: Dependency foo should not use option with-bar
           depends_on "icu4c" => [:optional, "c++11"]
-                                            ^^^^^^^ Dependency icu4c should not use option c++11
+                                            ^^^^^^^ FormulaAudit/Miscellaneous: Dependency icu4c should not use option c++11
         end
       RUBY
     end
@@ -386,7 +364,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           if version == "HEAD"
-             ^^^^^^^^^^^^^^^^^ Use 'build.head?' instead of inspecting 'version'
+             ^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use 'build.head?' instead of inspecting 'version'
             foo()
           end
         end
@@ -400,8 +378,8 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           test do
             head = ARGV.include? "--HEAD"
-                   ^^^^ Use build instead of ARGV to check options
-                   ^^^^^^^^^^^^^^^^^^^^^^ Use "if build.head?" instead
+                   ^^^^ FormulaAudit/Miscellaneous: Use build instead of ARGV to check options
+                   ^^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use "if build.head?" instead
           end
         end
       RUBY
@@ -413,7 +391,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           needs :openmp
-          ^^^^^^^^^^^^^ 'needs :openmp' should be replaced with 'depends_on \"gcc\"'
+          ^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: 'needs :openmp' should be replaced with 'depends_on "gcc"'
         end
       RUBY
     end
@@ -425,7 +403,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           url 'https://brew.sh/foo-1.0.tgz'
           test do
             version = MACOS_VERSION
-                      ^^^^^^^^^^^^^ Use MacOS.version instead of MACOS_VERSION
+                      ^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Use MacOS.version instead of MACOS_VERSION
           end
         end
       RUBY
@@ -437,7 +415,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on "foo" if build.with? "foo"
-          ^^^^^^^^^^^^^^^^ Replace depends_on "foo" if build.with? "foo" with depends_on "foo" => :optional
+          ^^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Replace depends_on "foo" if build.with? "foo" with depends_on "foo" => :optional
         end
       RUBY
     end
@@ -448,7 +426,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on :foo unless build.without? "foo"
-          ^^^^^^^^^^^^^^^ Replace depends_on :foo unless build.without? "foo" with depends_on :foo => :recommended
+          ^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Replace depends_on :foo unless build.without? "foo" with depends_on :foo => :recommended
         end
       RUBY
     end
@@ -459,7 +437,7 @@ describe RuboCop::Cop::FormulaAudit::Miscellaneous do
           desc "foo"
           url 'https://brew.sh/foo-1.0.tgz'
           depends_on :foo unless build.include? "without-foo"
-          ^^^^^^^^^^^^^^^ Replace depends_on :foo unless build.include? "without-foo" with depends_on :foo => :recommended
+          ^^^^^^^^^^^^^^^ FormulaAudit/Miscellaneous: Replace depends_on :foo unless build.include? "without-foo" with depends_on :foo => :recommended
         end
       RUBY
     end

@@ -1,9 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
+require "cmd/fetch"
 require "cmd/shared_examples/args_parse"
 
-describe "brew fetch" do
+RSpec.describe Homebrew::Cmd::FetchCmd do
   it_behaves_like "parseable arguments"
 
   it "downloads the Formula's URL", :integration_test do

@@ -1,4 +1,4 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "keg"
@@ -7,11 +7,7 @@ require "linkage_cache_store"
 require "fiddle"
 
 # Check for broken/missing linkage in a formula's keg.
-#
-# @api private
 class LinkageChecker
-  extend T::Sig
-
   attr_reader :undeclared_deps, :keg, :formula, :store
 
   def initialize(keg, formula = nil, cache_db:, rebuild_cache: false)
@@ -21,8 +17,6 @@ class LinkageChecker
 
     @system_dylibs    = Set.new
     @broken_dylibs    = Set.new
-    @unexpected_broken_dylibs = nil
-    @unexpected_present_dylibs = nil
     @variable_dylibs  = Set.new
     @brewed_dylibs    = Hash.new { |h, k| h[k] = Set.new }
     @reverse_links    = Hash.new { |h, k| h[k] = Set.new }
@@ -32,20 +26,24 @@ class LinkageChecker
     @unnecessary_deps = []
     @unwanted_system_dylibs = []
     @version_conflict_deps = []
+    @files_missing_rpaths = []
+    @executable_path_dylibs = []
 
-    check_dylibs(rebuild_cache: rebuild_cache)
+    check_dylibs(rebuild_cache:)
   end
 
   def display_normal_output
     display_items "System libraries", @system_dylibs
     display_items "Homebrew libraries", @brewed_dylibs
     display_items "Indirect dependencies with linkage", @indirect_deps
-    display_items "Variable-referenced libraries", @variable_dylibs
+    display_items "@rpath-referenced libraries", @variable_dylibs
     display_items "Missing libraries", @broken_dylibs
     display_items "Broken dependencies", @broken_deps
     display_items "Undeclared dependencies with linkage", @undeclared_deps
     display_items "Dependencies with no linkage", @unnecessary_deps
     display_items "Unwanted system libraries", @unwanted_system_dylibs
+    display_items "Files with missing rpath", @files_missing_rpaths
+    display_items "@executable_path references in libraries", @executable_path_dylibs
   end
 
   def display_reverse_output
@@ -63,59 +61,28 @@ class LinkageChecker
   end
 
   def display_test_output(puts_output: true, strict: false)
-    display_items "Missing libraries", broken_dylibs_with_expectations, puts_output: puts_output
-    display_items "Unused missing linkage information", unexpected_present_dylibs, puts_output: puts_output
-    display_items "Broken dependencies", @broken_deps, puts_output: puts_output
-    display_items "Unwanted system libraries", @unwanted_system_dylibs, puts_output: puts_output
-    display_items "Conflicting libraries", @version_conflict_deps, puts_output: puts_output
-    display_items "Undeclared dependencies with linkage", @undeclared_deps, puts_output: puts_output if strict
+    display_items("Missing libraries", @broken_dylibs, puts_output:)
+    display_items("Broken dependencies", @broken_deps, puts_output:)
+    display_items("Unwanted system libraries", @unwanted_system_dylibs, puts_output:)
+    display_items("Conflicting libraries", @version_conflict_deps, puts_output:)
+    return unless strict
+
+    display_items("Indirect dependencies with linkage", @indirect_deps, puts_output:)
+    display_items("Undeclared dependencies with linkage", @undeclared_deps, puts_output:)
+    display_items("Files with missing rpath", @files_missing_rpaths, puts_output:)
+    display_items "@executable_path references in libraries", @executable_path_dylibs, puts_output:
   end
 
-  sig { params(strict: T::Boolean).returns(T::Boolean) }
-  def broken_library_linkage?(strict: false)
-    issues = [@broken_deps, @unwanted_system_dylibs, @version_conflict_deps]
-    issues << @undeclared_deps if strict
-    [issues, unexpected_broken_dylibs, unexpected_present_dylibs].flatten.any?(&:present?)
-  end
+  sig { params(test: T::Boolean, strict: T::Boolean).returns(T::Boolean) }
+  def broken_library_linkage?(test: false, strict: false)
+    raise ArgumentError, "Strict linkage checking requires test mode to be enabled." if strict && !test
 
-  def unexpected_broken_dylibs
-    return @unexpected_broken_dylibs if @unexpected_broken_dylibs
-
-    @unexpected_broken_dylibs = @broken_dylibs.reject do |broken_lib|
-      @formula.class.allowed_missing_libraries.any? do |allowed_missing_lib|
-        case allowed_missing_lib
-        when Regexp
-          allowed_missing_lib.match? broken_lib
-        when String
-          broken_lib.include? allowed_missing_lib
-        end
-      end
+    issues = [@broken_deps, @broken_dylibs]
+    if test
+      issues += [@unwanted_system_dylibs, @version_conflict_deps]
+      issues += [@indirect_deps, @undeclared_deps, @files_missing_rpaths, @executable_path_dylibs] if strict
     end
-  end
-
-  def unexpected_present_dylibs
-    @unexpected_present_dylibs ||= @formula.class.allowed_missing_libraries.reject do |allowed_missing_lib|
-      @broken_dylibs.any? do |broken_lib|
-        case allowed_missing_lib
-        when Regexp
-          allowed_missing_lib.match? broken_lib
-        when String
-          broken_lib.include? allowed_missing_lib
-        end
-      end
-    end
-  end
-
-  def broken_dylibs_with_expectations
-    output = {}
-    @broken_dylibs.each do |broken_lib|
-      output[broken_lib] = if unexpected_broken_dylibs.include? broken_lib
-        ["unexpected"]
-      else
-        ["expected"]
-      end
-    end
-    output
+    issues.any?(&:present?)
   end
 
   private
@@ -123,6 +90,13 @@ class LinkageChecker
   def dylib_to_dep(dylib)
     dylib =~ %r{#{Regexp.escape(HOMEBREW_PREFIX)}/(opt|Cellar)/([\w+-.@]+)/}o
     Regexp.last_match(2)
+  end
+
+  sig { params(file: String).returns(T::Boolean) }
+  def broken_dylibs_allowed?(file)
+    return false if formula.name != "julia"
+
+    file.start_with?("#{formula.prefix.realpath}/share/julia/compiled/")
   end
 
   def check_dylibs(rebuild_cache:)
@@ -141,31 +115,44 @@ class LinkageChecker
       @keg.find do |file|
         next if file.symlink? || file.directory?
         next if !file.dylib? && !file.binary_executable? && !file.mach_o_bundle?
+        next unless file.arch_compatible?(Hardware::CPU.arch)
 
         # weakly loaded dylibs may not actually exist on disk, so skip them
         # when checking for broken linkage
         keg_files_dylibs[file] =
-          file.dynamically_linked_libraries(except: :LC_LOAD_WEAK_DYLIB)
+          file.dynamically_linked_libraries(except: :DYLIB_USE_WEAK_LINK)
       end
     end
 
     checked_dylibs = Set.new
 
     keg_files_dylibs.each do |file, dylibs|
+      file_has_any_rpath_dylibs = T.let(false, T::Boolean)
       dylibs.each do |dylib|
         @reverse_links[dylib] << file
+
+        # Files that link @rpath-prefixed dylibs must include at
+        # least one rpath in order to resolve it.
+        if !file_has_any_rpath_dylibs && (dylib.start_with? "@rpath/")
+          file_has_any_rpath_dylibs = true
+          pathname = Pathname(file)
+          @files_missing_rpaths << file if pathname.rpaths.empty? && !broken_dylibs_allowed?(file.to_s)
+        end
 
         next if checked_dylibs.include? dylib
 
         checked_dylibs << dylib
 
-        if dylib.start_with? "@"
+        if dylib.start_with? "@rpath"
           @variable_dylibs << dylib
+          next
+        elsif dylib.start_with?("@executable_path") && !Pathname(file).binary_executable?
+          @executable_path_dylibs << dylib
           next
         end
 
         begin
-          owner = Keg.for Pathname.new(dylib)
+          owner = Keg.for(Pathname(dylib))
         rescue NotAKegError
           @system_dylibs << dylib
         rescue Errno::ENOENT
@@ -173,16 +160,15 @@ class LinkageChecker
 
           if (dep = dylib_to_dep(dylib))
             @broken_deps[dep] |= [dylib]
-          elsif MacOS.version >= :big_sur && dylib_found_via_dlopen(dylib)
+          elsif system_libraries_exist_in_cache? && dylib_found_in_shared_cache?(dylib)
             # If we cannot associate the dylib with a dependency, then it may be a system library.
-            # In macOS Big Sur and later, system libraries do not exist on-disk and instead exist in a cache.
-            # If dlopen finds the dylib, then the linkage is not broken.
+            # Check the dylib shared cache for the library to verify this.
             @system_dylibs << dylib
-          else
+          elsif !system_framework?(dylib) && !broken_dylibs_allowed?(file.to_s)
             @broken_dylibs << dylib
           end
         else
-          tap = Tab.for_keg(owner).tap
+          tap = owner.tab.tap
           f = if tap.nil? || tap.core_tap?
             owner.name
           else
@@ -200,20 +186,32 @@ class LinkageChecker
 
     return unless keg_files_dylibs_was_empty
 
-    store&.update!(keg_files_dylibs: keg_files_dylibs)
+    store&.update!(keg_files_dylibs:)
   end
   alias generic_check_dylibs check_dylibs
 
-  def dylib_found_via_dlopen(dylib)
-    Fiddle.dlopen(dylib).close
-    true
-  rescue Fiddle::DLError
+  def system_libraries_exist_in_cache?
     false
+  end
+  alias generic_system_libraries_exist_in_cache? system_libraries_exist_in_cache?
+
+  def dylib_found_in_shared_cache?(dylib)
+    @dyld_shared_cache_contains_path ||= begin
+      libc = Fiddle.dlopen("/usr/lib/libSystem.B.dylib")
+
+      Fiddle::Function.new(
+        libc["_dyld_shared_cache_contains_path"],
+        [Fiddle::TYPE_CONST_STRING],
+        Fiddle::TYPE_BOOL,
+      )
+    end
+
+    @dyld_shared_cache_contains_path.call(dylib)
   end
 
   def check_formula_deps
     filter_out = proc do |dep|
-      next true if dep.build?
+      next true if dep.build? || dep.test?
 
       (dep.optional? || dep.recommended?) && formula.build.without?(dep)
     end
@@ -286,11 +284,16 @@ class LinkageChecker
   def harmless_broken_link?(dylib)
     # libgcc_s_* is referenced by programs that use the Java Service Wrapper,
     # and is harmless on x86(_64) machines
-    return true if [
+    # dyld will fall back to Apple libc++ if LLVM's is not available.
+    [
       "/usr/lib/libgcc_s_ppc64.1.dylib",
       "/opt/local/lib/libgcc/libgcc_s.1.dylib",
+      # TODO: Report linkage with `/usr/lib/libc++.1.dylib` when this link is broken.
+      "#{HOMEBREW_PREFIX}/opt/llvm/lib/libc++.1.dylib",
     ].include?(dylib)
+  end
 
+  def system_framework?(dylib)
     dylib.start_with?("/System/Library/Frameworks/")
   end
 

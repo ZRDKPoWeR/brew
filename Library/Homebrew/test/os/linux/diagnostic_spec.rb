@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "diagnostic"
 
-describe Homebrew::Diagnostic::Checks do
+RSpec.describe Homebrew::Diagnostic::Checks do
   subject(:checks) { described_class.new }
 
   specify "#check_supported_architecture" do

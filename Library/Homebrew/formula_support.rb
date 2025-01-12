@@ -1,4 +1,4 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 # Used to track formulae that cannot be installed at the same time.
@@ -7,8 +7,6 @@ FormulaConflict = Struct.new(:name, :reason)
 # Used to annotate formulae that duplicate macOS-provided software
 # or cause conflicts when linked in.
 class KegOnlyReason
-  extend T::Sig
-
   attr_reader :reason
 
   def initialize(reason, explanation)
@@ -39,6 +37,7 @@ class KegOnlyReason
     !by_macos?
   end
 
+  sig { returns(String) }
   def to_s
     return @explanation unless @explanation.empty?
 
@@ -60,30 +59,18 @@ class KegOnlyReason
       @reason
     end.strip
   end
-end
 
-# Used to annotate formulae that don't require compiling or cannot build a bottle.
-class BottleDisableReason
-  SUPPORTED_TYPES = [:unneeded, :disable].freeze
+  def to_hash
+    reason_string = if @reason.is_a?(Symbol)
+      @reason.inspect
+    else
+      @reason.to_s
+    end
 
-  def initialize(type, reason)
-    @type = type
-    @reason = reason
-    odeprecated "bottle :#{@type}" if valid?
-  end
-
-  def unneeded?
-    @type == :unneeded
-  end
-
-  def valid?
-    SUPPORTED_TYPES.include? @type
-  end
-
-  def to_s
-    return "This formula doesn't require compiling." if unneeded?
-
-    @reason
+    {
+      "reason"      => reason_string,
+      "explanation" => @explanation,
+    }
   end
 end
 

@@ -1,4 +1,4 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "tsort"
@@ -6,8 +6,6 @@ require "tsort"
 module Utils
   # Topologically sortable hash map.
   class TopologicalHash < Hash
-    extend T::Sig
-
     include TSort
 
     sig {
@@ -32,10 +30,10 @@ module Utils
         else
           formula_deps = cask_or_formula.deps
                                         .reject(&:build?)
+                                        .reject(&:test?)
                                         .map(&:to_formula)
           cask_deps = cask_or_formula.requirements
-                                     .map(&:cask)
-                                     .compact
+                                     .filter_map(&:cask)
                                      .map { |c| Cask::CaskLoader.load(c, config: nil) }
         end
 

@@ -1,14 +1,13 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 module RuboCop
   module Cop
     module Homebrew
-      # This cop restricts usage of IO.read functions for security reasons.
-      #
-      # @api private
+      # This cop restricts usage of `IO.read` functions for security reasons.
       class IORead < Base
         MSG = "The use of `IO.%<method>s` is a security risk."
+
         RESTRICT_ON_SEND = [:read, :readlines].freeze
 
         def on_send(node)

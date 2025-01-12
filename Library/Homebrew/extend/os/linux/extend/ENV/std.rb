@@ -1,12 +1,21 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 module Stdenv
-  def setup_build_environment(formula: nil, cc: nil, build_bottle: false, bottle_arch: nil, testing_formula: false)
-    generic_setup_build_environment(
-      formula: formula, cc: cc, build_bottle: build_bottle,
-      bottle_arch: bottle_arch, testing_formula: testing_formula
-    )
+  sig {
+    params(
+      formula:         T.nilable(Formula),
+      cc:              T.nilable(String),
+      build_bottle:    T.nilable(T::Boolean),
+      bottle_arch:     T.nilable(String),
+      testing_formula: T::Boolean,
+      debug_symbols:   T.nilable(T::Boolean),
+    ).void
+  }
+  def setup_build_environment(formula: nil, cc: nil, build_bottle: false, bottle_arch: nil, testing_formula: false,
+                              debug_symbols: false)
+    generic_setup_build_environment(formula:, cc:, build_bottle:, bottle_arch:,
+                                    testing_formula:, debug_symbols:)
 
     prepend_path "CPATH", HOMEBREW_PREFIX/"include"
     prepend_path "LIBRARY_PATH", HOMEBREW_PREFIX/"lib"

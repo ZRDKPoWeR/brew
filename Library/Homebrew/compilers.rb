@@ -1,10 +1,9 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-# @private
 module CompilerConstants
-  GNU_GCC_VERSIONS = %w[4.9 5 6 7 8 9 10 11].freeze
-  GNU_GCC_REGEXP = /^gcc-(4\.9|[5-9]|10|11)$/.freeze
+  GNU_GCC_VERSIONS = %w[7 8 9 10 11 12 13 14].freeze
+  GNU_GCC_REGEXP = /^gcc-(#{GNU_GCC_VERSIONS.join("|")})$/
   COMPILER_SYMBOL_MAP = {
     "gcc"        => :gcc,
     "clang"      => :clang,
@@ -16,8 +15,6 @@ module CompilerConstants
 end
 
 # Class for checking compiler compatibility for a formula.
-#
-# @api private
 class CompilerFailure
   attr_reader :type
 
@@ -54,7 +51,7 @@ class CompilerFailure
       version = 9999
       exact_major_match = false
     end
-    new(type, version, exact_major_match: exact_major_match, &block)
+    new(type, version, exact_major_match:, &block)
   end
 
   def fails_with?(compiler)
@@ -68,6 +65,7 @@ class CompilerFailure
     type == compiler.type && version_matched
   end
 
+  sig { returns(String) }
   def inspect
     "#<#{self.class.name}: #{type} #{version}>"
   end
@@ -97,10 +95,7 @@ class CompilerFailure
 end
 
 # Class for selecting a compiler for a formula.
-#
-# @api private
 class CompilerSelector
-  extend T::Sig
   include CompilerConstants
 
   Compiler = Struct.new(:type, :name, :version)
@@ -172,9 +167,9 @@ class CompilerSelector
   def compiler_version(name)
     case name.to_s
     when "gcc", GNU_GCC_REGEXP
-      versions.non_apple_gcc_version(name.to_s)
+      versions.gcc_version(name.to_s)
     else
-      versions.send("#{name}_build_version")
+      versions.send(:"#{name}_build_version")
     end
   end
 end

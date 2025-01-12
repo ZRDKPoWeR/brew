@@ -1,9 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
+require "cmd/pin"
 require "cmd/shared_examples/args_parse"
 
-describe "brew pin" do
+RSpec.describe Homebrew::Cmd::Pin do
   it_behaves_like "parseable arguments"
 
   it "pins a Formula's version", :integration_test do

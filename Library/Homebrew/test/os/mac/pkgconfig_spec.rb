@@ -1,4 +1,3 @@
-# typed: false
 # frozen_string_literal: true
 
 # These tests assume the needed SDKs are correctly installed, i.e. `brew doctor` passes.
@@ -13,7 +12,7 @@
 # Additionally, libffi version detection cannot be performed on systems running Mojave or earlier.
 #
 # For indeterminable cases, consult https://opensource.apple.com for the version used.
-describe "pkg-config" do
+RSpec.describe "pkg-config", :needs_ci, type: :system do
   def pc_version(library)
     path = HOMEBREW_LIBRARY_PATH/"os/mac/pkgconfig/#{MacOS.version}/#{library}.pc"
     version = File.foreach(path)
@@ -32,6 +31,15 @@ describe "pkg-config" do
   end
 
   let(:sdk) { MacOS.sdk_path_if_needed }
+
+  it "returns the correct version for bzip2" do
+    version = File.foreach("#{sdk}/usr/include/bzlib.h")
+                  .lazy
+                  .grep(%r{^\s*bzip2/libbzip2 version (\S+) of }) { Regexp.last_match(1) }
+                  .first
+
+    expect(pc_version("bzip2")).to eq(version)
+  end
 
   it "returns the correct version for expat" do
     version = File.foreach("#{sdk}/usr/include/expat.h")
@@ -68,7 +76,7 @@ describe "pkg-config" do
   it "returns the correct version for libffi" do
     version = File.foreach("#{sdk}/usr/include/ffi/ffi.h")
                   .lazy
-                  .grep(/^\s*libffi (\S+) - Copyright /) { Regexp.last_match(1) }
+                  .grep(/^\s*libffi (\S+)\s+(?:- Copyright |$)/) { Regexp.last_match(1) }
                   .first
 
     skip "Cannot detect system libffi version." if version == "PyOBJC"

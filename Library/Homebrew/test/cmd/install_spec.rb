@@ -1,9 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
+require "cmd/install"
 require "cmd/shared_examples/args_parse"
 
-describe "brew install" do
+RSpec.describe Homebrew::Cmd::InstallCmd do
   it_behaves_like "parseable arguments"
 
   it "installs formulae", :integration_test do
@@ -45,7 +45,7 @@ describe "brew install" do
     repo_path.join("bin").mkpath
 
     repo_path.cd do
-      system "git", "init"
+      system "git", "-c", "init.defaultBranch=master", "init"
       system "git", "remote", "add", "origin", "https://github.com/Homebrew/homebrew-foo"
       FileUtils.touch "bin/something.bin"
       FileUtils.touch "README"
@@ -71,5 +71,17 @@ describe "brew install" do
       .and output(/Cloning into/).to_stderr
       .and be_a_success
     expect(HOMEBREW_CELLAR/"testball1/HEAD-d5eb689/foo/test").not_to be_a_file
+  end
+
+  it "installs formulae with debug symbols", :integration_test do
+    setup_test_formula "testball1"
+
+    expect { brew "install", "testball1", "--debug-symbols", "--build-from-source" }
+      .to output(%r{#{HOMEBREW_CELLAR}/testball1/0\.1}o).to_stdout
+      .and not_to_output.to_stderr
+      .and be_a_success
+    expect(HOMEBREW_CELLAR/"testball1/0.1/bin/test").to be_a_file
+    expect(HOMEBREW_CELLAR/"testball1/0.1/bin/test.dSYM/Contents/Resources/DWARF/test").to be_a_file if OS.mac?
+    expect(HOMEBREW_CACHE/"Sources/testball1").to be_a_directory
   end
 end

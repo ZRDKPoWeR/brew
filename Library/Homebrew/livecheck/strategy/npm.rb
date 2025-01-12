@@ -1,4 +1,4 @@
-# typed: true
+# typed: strict
 # frozen_string_literal: true
 
 module Homebrew
@@ -17,15 +17,13 @@ module Homebrew
       #
       # @api public
       class Npm
-        extend T::Sig
-
         NICE_NAME = "npm"
 
         # The `Regexp` used to determine if the strategy applies to the URL.
         URL_MATCH_REGEX = %r{
           ^https?://registry\.npmjs\.org
           /(?<package_name>.+?)/-/ # The npm package name
-        }ix.freeze
+        }ix
 
         # Whether the strategy can be applied to the provided URL.
         #
@@ -72,14 +70,14 @@ module Homebrew
           params(
             url:    String,
             regex:  T.nilable(Regexp),
-            unused: T.nilable(T::Hash[Symbol, T.untyped]),
-            block:  T.untyped,
+            unused: T.untyped,
+            block:  T.nilable(Proc),
           ).returns(T::Hash[Symbol, T.untyped])
         }
         def self.find_versions(url:, regex: nil, **unused, &block)
           generated = generate_input_values(url)
 
-          T.unsafe(PageMatch).find_versions(url: generated[:url], regex: regex || generated[:regex], **unused, &block)
+          PageMatch.find_versions(url: generated[:url], regex: regex || generated[:regex], **unused, &block)
         end
       end
     end

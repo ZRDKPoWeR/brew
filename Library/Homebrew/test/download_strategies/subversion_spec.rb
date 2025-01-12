@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "download_strategy"
 
-describe SubversionDownloadStrategy do
+RSpec.describe SubversionDownloadStrategy do
   subject(:strategy) { described_class.new(url, name, version, **specs) }
 
   let(:name) { "foo" }

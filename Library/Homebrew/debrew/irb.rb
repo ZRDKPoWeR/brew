@@ -1,11 +1,13 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "irb"
 
-# @private
 module IRB
   def self.start_within(binding)
+    old_stdout_sync = $stdout.sync
+    $stdout.sync = true
+
     unless @setup_done
       setup(nil, argv: [])
       @setup_done = true
@@ -13,21 +15,8 @@ module IRB
 
     workspace = WorkSpace.new(binding)
     irb = Irb.new(workspace)
-
-    @CONF[:IRB_RC]&.call(irb.context)
-    @CONF[:MAIN_CONTEXT] = irb.context
-
-    prev_trap = trap("SIGINT") do
-      irb.signal_handle
-    end
-
-    begin
-      catch(:IRB_EXIT) do
-        irb.eval_input
-      end
-    ensure
-      trap("SIGINT", prev_trap)
-      irb_at_exit
-    end
+    irb.run(conf)
+  ensure
+    $stdout.sync = old_stdout_sync
   end
 end

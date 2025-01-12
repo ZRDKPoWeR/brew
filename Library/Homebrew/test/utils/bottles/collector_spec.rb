@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "utils/bottles"
 
-describe Utils::Bottles::Collector do
+RSpec.describe Utils::Bottles::Collector do
   subject(:collector) { described_class.new }
 
   let(:catalina) { Utils::Bottles::Tag.from_symbol(:catalina) }
@@ -21,12 +20,12 @@ describe Utils::Bottles::Collector do
     end
 
     it "returns nil if empty" do
-      expect(collector.specification_for(Utils::Bottles::Tag.from_symbol(:foo))).to be nil
+      expect(collector.specification_for(Utils::Bottles::Tag.from_symbol(:foo))).to be_nil
     end
 
     it "returns nil when there is no match" do
       collector.add(catalina, checksum: Checksum.new("bar_checksum"), cellar: "bar_cellar")
-      expect(collector.specification_for(Utils::Bottles::Tag.from_symbol(:foo))).to be nil
+      expect(collector.specification_for(Utils::Bottles::Tag.from_symbol(:foo))).to be_nil
     end
 
     it "uses older tags when needed", :needs_macos do
@@ -36,8 +35,7 @@ describe Utils::Bottles::Collector do
     end
 
     it "does not use older tags when requested not to", :needs_macos do
-      allow(Homebrew::EnvConfig).to receive(:developer?).and_return(true)
-      allow(Homebrew::EnvConfig).to receive(:skip_or_later_bottles?).and_return(true)
+      allow(Homebrew::EnvConfig).to receive_messages(developer?: true, skip_or_later_bottles?: true)
       allow(OS::Mac.version).to receive(:prerelease?).and_return(true)
       collector.add(mojave, checksum: Checksum.new("foo_checksum"), cellar: "foo_cellar")
       expect(collector.send(:find_matching_tag, mojave)).to eq(mojave)

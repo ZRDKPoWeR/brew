@@ -1,16 +1,17 @@
-# typed: false
+# typed: strict
 # frozen_string_literal: true
 
 require "cache_store"
 require "linkage_checker"
 
 module FormulaCellarChecks
+  sig { returns(T.nilable(String)) }
   def check_shadowed_headers
     return if ["libtool", "subversion", "berkeley-db"].any? do |formula_name|
       formula.name.start_with?(formula_name)
     end
 
-    return if formula.name&.match?(Version.formula_optionally_versioned_regex(:php))
+    return if formula.name.match?(Version.formula_optionally_versioned_regex(:php))
     return if formula.keg_only? || !formula.include.directory?
 
     files  = relative_glob(formula.include, "**/*.h")
@@ -26,13 +27,14 @@ module FormulaCellarChecks
     EOS
   end
 
+  sig { returns(T.nilable(String)) }
   def check_openssl_links
     return unless formula.prefix.directory?
 
     keg = Keg.new(formula.prefix)
     system_openssl = keg.mach_o_files.select do |obj|
       dlls = obj.dynamically_linked_libraries
-      dlls.any? { |dll| %r{/usr/lib/lib(crypto|ssl|tls)\..*dylib}.match dll }
+      dlls.any? { |dll| %r{/usr/lib/lib(crypto|ssl|tls)\..*dylib}.match? dll }
     end
     return if system_openssl.empty?
 
@@ -45,11 +47,12 @@ module FormulaCellarChecks
     EOS
   end
 
+  sig { params(lib: Pathname).returns(T.nilable(String)) }
   def check_python_framework_links(lib)
     python_modules = Pathname.glob lib/"python*/site-packages/**/*.so"
     framework_links = python_modules.select do |obj|
       dlls = obj.dynamically_linked_libraries
-      dlls.any? { |dll| /Python\.framework/.match dll }
+      dlls.any? { |dll| dll.include?("Python.framework") }
     end
     return if framework_links.empty?
 
@@ -62,6 +65,7 @@ module FormulaCellarChecks
     EOS
   end
 
+  sig { void }
   def check_linkage
     return unless formula.prefix.directory?
 
@@ -76,23 +80,24 @@ module FormulaCellarChecks
           #{checker.display_test_output}
       EOS
 
-      tab = Tab.for_keg(keg)
+      tab = keg.tab
       if tab.poured_from_bottle
         output += <<~EOS
           Rebuild this from source with:
             brew reinstall --build-from-source #{formula}
-          If that's successful, file an issue#{formula.tap ? " here:\n  #{formula.tap.issues_url}" : "."}
+          If that's successful, file an issue#{formula.tap ? " here:\n  #{T.must(formula.tap).issues_url}" : "."}
         EOS
       end
       problem_if_output output
     end
   end
 
+  sig { params(formula: Formula).returns(T.nilable(String)) }
   def check_flat_namespace(formula)
     return unless formula.prefix.directory?
-    return if formula.tap.present? && formula.tap.audit_exception(:flat_namespace_allowlist, formula.name)
+    return if formula.tap&.audit_exception(:flat_namespace_allowlist, formula.name)
 
-    keg = Keg.new(formula.prefix)
+    keg = ::Keg.new(formula.prefix)
     flat_namespace_files = keg.mach_o_files.reject do |file|
       next true unless file.dylib?
 
@@ -107,12 +112,13 @@ module FormulaCellarChecks
 
     <<~EOS
       Libraries were compiled with a flat namespace.
-      This can cause linker errors due to name collisions, and
+      This can cause linker errors due to name collisions and
       is often due to a bug in detecting the macOS version.
         #{flat_namespace_files * "\n  "}
     EOS
   end
 
+  sig { void }
   def audit_installed
     generic_audit_installed
     problem_if_output(check_shadowed_headers)
@@ -122,6 +128,7 @@ module FormulaCellarChecks
     problem_if_output(check_flat_namespace(formula))
   end
 
+  sig { params(filename: Pathname).returns(T::Boolean) }
   def valid_library_extension?(filename)
     macos_lib_extensions = %w[.dylib .framework]
     generic_valid_library_extension?(filename) || macos_lib_extensions.include?(filename.extname)

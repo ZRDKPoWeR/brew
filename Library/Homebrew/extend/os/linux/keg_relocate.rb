@@ -1,4 +1,4 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "compilers"
@@ -6,10 +6,7 @@ require "compilers"
 class Keg
   def relocate_dynamic_linkage(relocation)
     # Patching the dynamic linker of glibc breaks it.
-    return if name == "glibc"
-
-    # Patching patchelf fails with "Text file busy" or SIGBUS.
-    return if name == "patchelf"
+    return if name.match? Version.formula_optionally_versioned_regex(:glibc)
 
     old_prefix, new_prefix = relocation.replacement_pair_for(:prefix)
 
@@ -21,7 +18,7 @@ class Keg
   end
 
   def change_rpath(file, old_prefix, new_prefix)
-    return if !file.elf? || !file.dynamic_elf?
+    return false if !file.elf? || !file.dynamic_elf?
 
     updated = {}
     old_rpath = file.rpath
@@ -32,6 +29,12 @@ class Keg
 
       lib_path = "#{new_prefix}/lib"
       rpath << lib_path unless rpath.include? lib_path
+
+      # Add GCC's lib directory (as of GCC 12+) to RPATH when there is existing versioned linkage.
+      # This prevents broken linkage when pouring bottles built with an old GCC formula.
+      unless name.match?(Version.formula_optionally_versioned_regex(:gcc))
+        rpath.map! { |rp| rp.sub(%r{lib/gcc/\d+$}, "lib/gcc/current") }
+      end
 
       rpath.join(":")
     end
@@ -48,6 +51,7 @@ class Keg
     updated[:interpreter] = new_interpreter if old_interpreter != new_interpreter
 
     file.patch!(interpreter: updated[:interpreter], rpath: updated[:rpath])
+    true
   end
 
   def detect_cxx_stdlibs(options = {})
@@ -79,18 +83,5 @@ class Keg
       elf_files << pn
     end
     elf_files
-  end
-
-  def self.bottle_dependencies
-    @bottle_dependencies ||= begin
-      formulae = relocation_formulae
-      gcc = Formulary.factory(CompilerSelector.preferred_gcc)
-      if !Homebrew::EnvConfig.simulate_macos_on_linux? &&
-         DevelopmentTools.non_apple_gcc_version("gcc") < gcc.version.to_i
-        formulae += gcc.recursive_dependencies.map(&:name)
-        formulae << gcc.name
-      end
-      formulae
-    end
   end
 end

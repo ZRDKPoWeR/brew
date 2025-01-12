@@ -1,8 +1,9 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-require "active_support/core_ext/array/access"
+require "extend/array"
 require "rubocops/shared/helper_functions"
+require "shellwords"
 
 module RuboCop
   module Cop
@@ -39,13 +40,13 @@ module RuboCop
         until
         while
       ].freeze
+      private_constant :SHELL_BUILTINS
 
       # https://github.com/ruby/ruby/blob/v2_6_3/process.c#L2495
       SHELL_METACHARACTERS = %W[* ? { } [ ] < > ( ) ~ & | \\ $ ; ' ` " \n #].freeze
+      private_constant :SHELL_METACHARACTERS
 
       # This cop makes sure that shell command arguments are separated.
-      #
-      # @api private
       class ShellCommands < Base
         include HelperFunctions
         extend AutoCorrector
@@ -61,11 +62,13 @@ module RuboCop
           [:Utils, :popen_write],
           [:Utils, :safe_popen_write],
         ].freeze
+        private_constant :TARGET_METHODS
+
         RESTRICT_ON_SEND = TARGET_METHODS.map(&:second).uniq.freeze
 
         def on_send(node)
           TARGET_METHODS.each do |target_class, target_method|
-            next unless node.method_name == target_method
+            next if node.method_name != target_method
 
             target_receivers = if target_class.nil?
               [nil, s(:const, nil, :Kernel), s(:const, nil, :Homebrew)]
@@ -100,7 +103,7 @@ module RuboCop
             else
               target_method.to_s
             end
-            add_offense(first_arg, message: format(MSG, method: method_string, good_args: good_args)) do |corrector|
+            add_offense(first_arg, message: format(MSG, method: method_string, good_args:)) do |corrector|
               corrector.replace(first_arg.source_range, good_args)
             end
           end
@@ -108,12 +111,10 @@ module RuboCop
       end
 
       # This cop disallows shell metacharacters in `exec` calls.
-      #
-      # @api private
       class ExecShellMetacharacters < Base
         include HelperFunctions
 
-        MSG = "Don't use shell metacharacters in `exec`. "\
+        MSG = "Don't use shell metacharacters in `exec`. " \
               "Implement the logic in Ruby instead, using methods like `$stdout.reopen`."
 
         RESTRICT_ON_SEND = [:exec].freeze

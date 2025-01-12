@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "dependencies_helpers"
 
-describe DependenciesHelpers do
+RSpec.describe DependenciesHelpers do
   specify "#dependents" do
     foo = formula "foo" do
       url "foo"

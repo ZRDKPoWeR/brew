@@ -1,4 +1,4 @@
-# typed: false
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "rubocops/shared/helper_functions"
@@ -6,8 +6,6 @@ require "rubocops/shared/helper_functions"
 module RuboCop
   module Cop
     # This module performs common checks the `desc` field in both formulae and casks.
-    #
-    # @api private
     module DescHelper
       include HelperFunctions
 
@@ -53,8 +51,7 @@ module RuboCop
         desc_problem "Description shouldn't start with an article." if regex_match_group(desc, /^(the|an?)(?=\s)/i)
 
         # Check if invalid lowercase words are at the start of a desc.
-        if !VALID_LOWERCASE_WORDS.include?(string_content(desc).split.first) &&
-           regex_match_group(desc, /^[a-z]/)
+        if !VALID_LOWERCASE_WORDS.include?(string_content(desc).split.first) && regex_match_group(desc, /^[a-z]/)
           desc_problem "Description should start with a capital letter."
         end
 
@@ -67,13 +64,16 @@ module RuboCop
         if type == :cask &&
            (match = regex_match_group(desc, /\b(macOS|Mac( ?OS( ?X)?)?|OS ?X)(?! virtual machines?)\b/i)) &&
            match[1] != "MAC"
-          desc_problem "Description shouldn't contain the platform."
+          add_offense(@offensive_source_range, message: "Description shouldn't contain the platform.")
         end
 
         # Check if a full stop is used at the end of a desc (apart from in the case of "etc.").
         if regex_match_group(desc, /\.$/) && !string_content(desc).end_with?("etc.")
           desc_problem "Description shouldn't end with a full stop."
         end
+
+        # Check if the desc contains Unicode emojis or symbols (Unicode Other Symbols category).
+        desc_problem "Description shouldn't contain Unicode emojis or symbols." if regex_match_group(desc, /\p{So}/)
 
         # Check if the desc length exceeds maximum length.
         return if desc_length <= MAX_DESC_LENGTH
@@ -84,8 +84,10 @@ module RuboCop
 
       # Auto correct desc problems. `regex_match_group` must be called before this to populate @offense_source_range.
       def desc_problem(message)
-        add_offense(@offensive_source_range, message: message) do |corrector|
-          /\A(?<quote>["'])(?<correction>.*)(?:\k<quote>)\Z/ =~ @offensive_node.source
+        add_offense(@offensive_source_range, message:) do |corrector|
+          match_data = @offensive_node.source.match(/\A(?<quote>["'])(?<correction>.*)(?:\k<quote>)\Z/)
+          correction = match_data[:correction]
+          quote = match_data[:quote]
 
           next if correction.nil?
 
@@ -102,9 +104,12 @@ module RuboCop
 
           correction.gsub!(/(ommand ?line)/i, "ommand-line")
           correction.gsub!(/(^|[^a-z])#{@name}([^a-z]|$)/i, "\\1\\2")
+          correction.gsub!(/\s?\p{So}/, "")
           correction.gsub!(/^\s+/, "")
           correction.gsub!(/\s+$/, "")
           correction.gsub!(/\.$/, "")
+
+          next if correction == match_data[:correction]
 
           corrector.replace(@offensive_node.source_range, "#{quote}#{correction}#{quote}")
         end

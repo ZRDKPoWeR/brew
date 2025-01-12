@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "formula_info"
 
-describe FormulaInfo, :integration_test do
+RSpec.describe FormulaInfo, :integration_test do
   it "tests the FormulaInfo class" do
     install_test_formula "testball"
 

@@ -1,12 +1,10 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-require "context"
-require "resource"
-require "metafiles"
-
 module DiskUsageExtension
-  extend T::Sig
+  extend T::Helpers
+
+  requires_ancestor { Pathname }
 
   sig { returns(Integer) }
   def disk_usage
@@ -75,14 +73,17 @@ module DiskUsageExtension
   end
 end
 
+require "system_command"
+
 # Homebrew extends Ruby's `Pathname` to make our code more readable.
 # @see https://ruby-doc.org/stdlib-2.6.3/libdoc/pathname/rdoc/Pathname.html Ruby's Pathname API
 class Pathname
-  extend T::Sig
-
+  include SystemCommand::Mixin
   include DiskUsageExtension
 
   # Moves a file from the original location to the {Pathname}'s.
+  #
+  # @api public
   sig {
     params(sources: T.any(
       Resource, Resource::Partial, String, Pathname,
@@ -125,12 +126,13 @@ class Pathname
 
     mkpath
 
-    # Use FileUtils.mv over File.rename to handle filesystem boundaries. If src
-    # is a symlink, and its target is moved first, FileUtils.mv will fail:
-    #   https://bugs.ruby-lang.org/issues/7707
-    # In that case, use the system "mv" command.
+    # Use `FileUtils.mv` over `File.rename` to handle filesystem boundaries. If `src`
+    # is a symlink and its target is moved first, `FileUtils.mv` will fail
+    # (https://bugs.ruby-lang.org/issues/7707).
+    #
+    # In that case, use the system `mv` command.
     if src.symlink?
-      raise unless Kernel.system "mv", src, dst
+      raise unless Kernel.system "mv", src.to_s, dst
     else
       FileUtils.mv src, dst
     end
@@ -138,6 +140,8 @@ class Pathname
   private :install_p
 
   # Creates symlinks to sources in this folder.
+  #
+  # @api public
   sig {
     params(
       sources: T.any(String, Pathname, T::Array[T.any(String, Pathname)], T::Hash[T.any(String, Pathname), String]),
@@ -166,6 +170,8 @@ class Pathname
   private :install_symlink_p
 
   # Only appends to a file that is already created.
+  #
+  # @api public
   sig { params(content: String, open_args: T.untyped).void }
   def append_lines(content, **open_args)
     raise "Cannot append file that doesn't exist: #{self}" unless exist?
@@ -173,9 +179,15 @@ class Pathname
     T.unsafe(self).open("a", **open_args) { |f| f.puts(content) }
   end
 
-  # @note This always overwrites.
+  # Write to a file atomically.
+  #
+  # NOTE: This always overwrites.
+  #
+  # @api public
   sig { params(content: String).void }
   def atomic_write(content)
+    require "extend/file/atomic"
+
     old_stat = stat if exist?
     File.atomic_write(self) do |file|
       file.write(content)
@@ -194,6 +206,7 @@ class Pathname
       # Changing file ownership failed, moving on.
       nil
     end
+
     begin
       # This operation will affect filesystem ACL's
       chmod(old_stat.mode)
@@ -203,7 +216,6 @@ class Pathname
     end
   end
 
-  # @private
   def cp_path_sub(pattern, replacement)
     raise "#{self} does not exist" unless exist?
 
@@ -220,10 +232,9 @@ class Pathname
     end
   end
 
-  # @private
-  alias extname_old extname
-
   # Extended to support common double extensions.
+  #
+  # @api public
   sig { returns(String) }
   def extname
     basename = File.basename(self)
@@ -241,6 +252,8 @@ class Pathname
   end
 
   # For filetypes we support, returns basename without extension.
+  #
+  # @api public
   sig { returns(String) }
   def stem
     File.basename(self, extname)
@@ -249,7 +262,6 @@ class Pathname
   # I don't trust the children.length == 0 check particularly, not to mention
   # it is slow to enumerate the whole directory just to see if it is empty,
   # instead rely on good ol' libc and the filesystem
-  # @private
   sig { returns(T::Boolean) }
   def rmdir_if_possible
     rmdir
@@ -265,17 +277,15 @@ class Pathname
     false
   end
 
-  # @private
   sig { returns(Version) }
   def version
     require "version"
     Version.parse(basename)
   end
 
-  # @private
   sig { returns(T::Boolean) }
   def text_executable?
-    /^#!\s*\S+/.match?(open("r") { |f| f.read(1024) })
+    /\A#!\s*\S+/.match?(open("r") { |f| f.read(1024) })
   end
 
   sig { returns(String) }
@@ -289,11 +299,14 @@ class Pathname
     raise ChecksumMissingError if expected.blank?
 
     actual = Checksum.new(sha256.downcase)
-    raise ChecksumMismatchError.new(self, expected, actual) unless expected == actual
+    raise ChecksumMismatchError.new(self, expected, actual) if expected != actual
   end
 
   alias to_str to_s
 
+  # Change to this directory, optionally executing the given block.
+  #
+  # @api public
   sig {
     type_parameters(:U).params(
       _block: T.proc.params(path: Pathname).returns(T.type_parameter(:U)),
@@ -303,18 +316,19 @@ class Pathname
     Dir.chdir(self) { yield self }
   end
 
+  # Get all sub-directories of this directory.
+  #
+  # @api public
   sig { returns(T::Array[Pathname]) }
   def subdirs
     children.select(&:directory?)
   end
 
-  # @private
   sig { returns(Pathname) }
   def resolved_path
     symlink? ? dirname.join(readlink) : self
   end
 
-  # @private
   sig { returns(T::Boolean) }
   def resolved_path_exists?
     link = readlink
@@ -325,16 +339,14 @@ class Pathname
     dirname.join(link).exist?
   end
 
-  # @private
   def make_relative_symlink(src)
     dirname.mkpath
     File.symlink(src.relative_path_from(dirname), self)
   end
 
-  # @private
   def ensure_writable
     saved_perms = nil
-    unless writable_real?
+    unless writable?
       saved_perms = stat.mode
       FileUtils.chmod "u+rw", to_path
     end
@@ -343,14 +355,21 @@ class Pathname
     chmod saved_perms if saved_perms
   end
 
-  # @private
-  def install_info
-    quiet_system "/usr/bin/install-info", "--quiet", to_s, "#{dirname}/dir"
+  def which_install_info
+    @which_install_info ||=
+      if File.executable?("/usr/bin/install-info")
+        "/usr/bin/install-info"
+      elsif Formula["texinfo"].any_version_installed?
+        Formula["texinfo"].opt_bin/"install-info"
+      end
   end
 
-  # @private
+  def install_info
+    quiet_system(which_install_info, "--quiet", to_s, "#{dirname}/dir")
+  end
+
   def uninstall_info
-    quiet_system "/usr/bin/install-info", "--delete", "--quiet", to_s, "#{dirname}/dir"
+    quiet_system(which_install_info, "--delete", "--quiet", to_s, "#{dirname}/dir")
   end
 
   # Writes an exec script in this folder for each target pathname.
@@ -416,9 +435,11 @@ class Pathname
   end
 
   def install_metafiles(from = Pathname.pwd)
+    require "metafiles"
+
     Pathname(from).children.each do |p|
       next if p.directory?
-      next if File.zero?(p)
+      next if File.empty?(p)
       next unless Metafiles.copy?(p.basename.to_s)
 
       # Some software symlinks these files (see help2man.rb)
@@ -451,17 +472,67 @@ class Pathname
   def dylib?
     false
   end
-end
 
+  sig { params(_wanted_arch: Symbol).returns(T::Boolean) }
+  def arch_compatible?(_wanted_arch)
+    true
+  end
+
+  sig { returns(T::Array[String]) }
+  def rpaths
+    []
+  end
+
+  sig { returns(String) }
+  def magic_number
+    @magic_number ||= if directory?
+      ""
+    else
+      # Length of the longest regex (currently Tar).
+      max_magic_number_length = 262
+      binread(max_magic_number_length) || ""
+    end
+  end
+
+  sig { returns(String) }
+  def file_type
+    @file_type ||= system_command("file", args: ["-b", self], print_stderr: false)
+                   .stdout.chomp
+  end
+
+  sig { returns(T::Array[String]) }
+  def zipinfo
+    @zipinfo ||= system_command("zipinfo", args: ["-1", self], print_stderr: false)
+                 .stdout
+                 .encode(Encoding::UTF_8, invalid: :replace)
+                 .split("\n")
+  end
+
+  # Like regular `rmtree`, except it never ignores errors.
+  #
+  # This was the default behaviour in Ruby 3.1 and earlier.
+  #
+  # @api public
+  def rmtree(noop: nil, verbose: nil, secure: nil)
+    # Ideally we'd odeprecate this but probably can't given gems so let's
+    # create a RuboCop autocorrect instead soon.
+    # This is why monkeypatching is non-ideal (but right solution to get
+    # Ruby 3.3 over the line).
+    odeprecated "rmtree", "FileUtils#rm_r"
+    FileUtils.rm_r(@path, noop:, verbose:, secure:)
+    nil
+  end
+end
 require "extend/os/pathname"
 
-# @private
+require "context"
+
 module ObserverPathnameExtension
-  extend T::Sig
+  extend T::Helpers
+
+  requires_ancestor { Pathname }
 
   class << self
-    extend T::Sig
-
     include Context
 
     sig { returns(Integer) }
@@ -479,7 +550,6 @@ module ObserverPathnameExtension
     end
 
     sig { returns([Integer, Integer]) }
-
     def counts
       [n, d]
     end

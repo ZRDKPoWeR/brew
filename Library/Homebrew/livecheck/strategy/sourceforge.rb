@@ -1,4 +1,4 @@
-# typed: true
+# typed: strict
 # frozen_string_literal: true
 
 module Homebrew
@@ -31,8 +31,6 @@ module Homebrew
       #
       # @api public
       class Sourceforge
-        extend T::Sig
-
         NICE_NAME = "SourceForge"
 
         # The `Regexp` used to determine if the strategy applies to the URL.
@@ -41,7 +39,7 @@ module Homebrew
           (?:/projects?/(?<project_name>[^/]+)/
           |/p/(?<project_name>[^/]+)/
           |(?::/cvsroot)?/(?<project_name>[^/]+))
-        }ix.freeze
+        }ix
 
         # Whether the strategy can be applied to the provided URL.
         #
@@ -91,14 +89,14 @@ module Homebrew
           params(
             url:    String,
             regex:  T.nilable(Regexp),
-            unused: T.nilable(T::Hash[Symbol, T.untyped]),
-            block:  T.untyped,
+            unused: T.untyped,
+            block:  T.nilable(Proc),
           ).returns(T::Hash[Symbol, T.untyped])
         }
         def self.find_versions(url:, regex: nil, **unused, &block)
           generated = generate_input_values(url)
 
-          T.unsafe(PageMatch).find_versions(
+          PageMatch.find_versions(
             url:   generated[:url] || url,
             regex: regex || generated[:regex],
             **unused,

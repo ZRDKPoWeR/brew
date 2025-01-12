@@ -1,69 +1,63 @@
-# typed: false
+# typed: strict
 # frozen_string_literal: true
 
-require "cli/parser"
+require "abstract_command"
 require "utils/github"
-require "dev-cmd/generate-man-completions"
+require "manpages"
+require "system_command"
 
 module Homebrew
-  extend T::Sig
+  module DevCmd
+    class UpdateMaintainers < AbstractCommand
+      include SystemCommand::Mixin
 
-  module_function
+      cmd_args do
+        description <<~EOS
+          Update the list of maintainers in the `Homebrew/brew` README.
+        EOS
 
-  sig { returns(CLI::Parser) }
-  def update_maintainers_args
-    Homebrew::CLI::Parser.new do
-      description <<~EOS
-        Update the list of maintainers in the `Homebrew/brew` README.
-      EOS
+        named_args :none
+      end
 
-      named_args :none
-    end
-  end
+      sig { override.void }
+      def run
+        # We assume that only public members wish to be included in the README
+        public_members = GitHub.public_member_usernames("Homebrew")
+        maintainers = GitHub.members_by_team("Homebrew", "maintainers")
 
-  def update_maintainers
-    update_maintainers_args.parse
+        members = {
+          plc:         GitHub.members_by_team("Homebrew", "plc"),
+          tsc:         GitHub.members_by_team("Homebrew", "tsc"),
+          maintainers:,
+        }
 
-    # We assume that only public members wish to be included in the README
-    public_members = GitHub.public_member_usernames("Homebrew")
+        sentences = {}
+        members.each do |group, hash|
+          hash.replace(hash.slice(*public_members))
+          hash.each { |login, name| hash[login] = "[#{name}](https://github.com/#{login})" }
+          sentences[group] = hash.values.sort_by { |s| s.unicode_normalize(:nfd).gsub(/\P{L}+/, "") }.to_sentence
+        end
 
-    members = {
-      plc:   GitHub.members_by_team("Homebrew", "plc"),
-      tsc:   GitHub.members_by_team("Homebrew", "tsc"),
-      linux: GitHub.members_by_team("Homebrew", "linux"),
-    }
-    members[:other] = GitHub.members_by_team("Homebrew", "maintainers")
-                            .except(*members.values.map(&:keys).flatten.uniq)
+        readme = HOMEBREW_REPOSITORY/"README.md"
 
-    sentences = {}
-    members.each do |group, hash|
-      hash.slice!(*public_members)
-      hash.each { |login, name| hash[login] = "[#{name}](https://github.com/#{login})" }
-      sentences[group] = hash.values.sort.to_sentence
-    end
+        content = readme.read
+        content.gsub!(/(Homebrew's \[Project Leadership Committee.*) is .*\./,
+                      "\\1 is #{sentences[:plc]}.")
+        content.gsub!(/(Homebrew's \[Technical Steering Committee.*) is .*\./,
+                      "\\1 is #{sentences[:tsc]}.")
+        content.gsub!(/(Homebrew's maintainers are).*\./,
+                      "\\1 #{sentences[:maintainers]}.")
 
-    readme = HOMEBREW_REPOSITORY/"README.md"
+        File.write(readme, content)
 
-    content = readme.read
-    content.gsub!(/(Homebrew's \[Project Leadership Committee.*) is .*\./,
-                  "\\1 is #{sentences[:plc]}.")
-    content.gsub!(/(Homebrew's \[Technical Steering Committee.*) is .*\./,
-                  "\\1 is #{sentences[:tsc]}.")
-    content.gsub!(/(Homebrew's Linux maintainers are).*\./,
-                  "\\1 #{sentences[:linux]}.")
-    content.gsub!(/(Homebrew's other current maintainers are).*\./,
-                  "\\1 #{sentences[:other]}.")
-
-    File.open(readme, "w+") { |f| f.write(content) }
-
-    diff = system_command "git", args: [
-      "-C", HOMEBREW_REPOSITORY, "diff", "--exit-code", "README.md"
-    ]
-    if diff.status.success?
-      puts "No changes to list of maintainers."
-    else
-      Homebrew.regenerate_man_pages(preserve_date: true, quiet: true)
-      puts "List of maintainers updated in the README and the generated man pages."
+        diff = system_command "git", args: ["-C", HOMEBREW_REPOSITORY, "diff", "--exit-code", "README.md"]
+        if diff.status.success?
+          ofail "No changes to list of maintainers."
+        else
+          Manpages.regenerate_man_pages(quiet: true)
+          puts "List of maintainers updated in the README and the generated man pages."
+        end
+      end
     end
   end
 end

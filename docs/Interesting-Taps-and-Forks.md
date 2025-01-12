@@ -1,4 +1,4 @@
-# Interesting Taps & Forks
+# Interesting Taps and Forks
 
 A [tap](Taps.md) is Homebrew-speak for a Git repository containing additional formulae.
 
@@ -7,6 +7,8 @@ Homebrew has the capability to add (and remove) multiple taps to your local inst
 Your taps are Git repositories located at `$(brew --repository)/Library/Taps`.
 
 ## Unsupported interesting taps
+
+* [DomT4/autoupdate](https://github.com/DomT4/homebrew-autoupdate): An external command to automatically run `brew update` (and optionally `brew upgrade` or `brew cleanup`) in the background with `launchd`.
 
 * [homebrew-ffmpeg/ffmpeg](https://github.com/homebrew-ffmpeg/homebrew-ffmpeg): A tap for FFmpeg with additional options, including nonfree additions.
 
@@ -27,6 +29,10 @@ Your taps are Git repositories located at `$(brew --repository)/Library/Taps`.
 * [lifepillar/appleii](https://github.com/lifepillar/homebrew-appleii): Formulae for vintage Apple emulation.
 
 * [gromgit/fuse](https://github.com/gromgit/homebrew-fuse): macOS FUSE formulae that are no longer available in `homebrew/core`.
+
+* [cloudflare/cloudflare](https://github.com/cloudflare/homebrew-cloudflare): Formulae for the applications by Cloudflare, including curl with HTTP/3 support.
+
+* [apple/apple](https://github.com/apple/homebrew-apple): Formulae from Apple, including the Game Porting Toolkit.
 
 ## Unsupported interesting forks
 

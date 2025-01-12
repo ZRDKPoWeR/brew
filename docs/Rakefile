@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require "rake"
 
 task default: :build
@@ -7,26 +9,37 @@ task :build do
   sh "jekyll", "build"
 end
 
-desc "Run html proofer to validate the HTML output."
+desc "Run Markdownlint to validate the Markdown style."
+task :lint do
+  sh "mdl $(git ls-files '*.md' | grep -v 'Manpage.md')"
+end
+
+desc "Run HTMLProofer to validate the HTML output."
 task test: :build do
   require "html-proofer"
   HTMLProofer.check_directory(
     "./_site",
-    parallel: { in_threads: 4 },
-    favicon: true,
-    http_status_ignore: [0, 403],
-    assume_extension: true,
-    check_favicon: true,
-    check_opengraph: true,
-    check_html: true,
-    check_img_http: true,
-    enforce_https: true,
-    file_ignore: [
-      %r{Kickstarter-Supporters},
+    parallel:            { in_threads: 4 },
+    favicon:             true,
+    ignore_status_codes: [0, 403],
+    check_favicon:       true,
+    check_opengraph:     true,
+    check_html:          true,
+    check_img_http:      true,
+    enforce_https:       true,
+    ignore_files:        [
+      /Kickstarter-Supporters/,
     ],
-    url_ignore: [
-      "http://formulae.brew.sh",
-      %r{https://github.com/Homebrew/brew/edit/gh-pages//},
-    ]
+    ignore_urls:         [
+      "/",
+      %r{https://formulae.brew.sh"},
+      %r{https://github.com/},
+      "https://legacy.python.org/dev/peps/pep-0453/#recommendations-for-downstream-distributors",
+    ],
+    cache:               {
+      timeframe: {
+        external: "1h",
+      },
+    },
   ).run
 end

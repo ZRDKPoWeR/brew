@@ -1,29 +1,31 @@
-# typed: false
+# typed: strict
 # frozen_string_literal: true
 
 require "language/python"
+require "utils/service"
 
 # A formula's caveats.
-#
-# @api private
 class Caveats
   extend Forwardable
 
-  attr_reader :f
+  sig { returns(Formula) }
+  attr_reader :formula
 
-  def initialize(f)
-    @f = f
+  sig { params(formula: Formula).void }
+  def initialize(formula)
+    @formula = formula
   end
 
+  sig { returns(String) }
   def caveats
     caveats = []
     begin
-      build = f.build
-      f.build = Tab.for_formula(f)
-      s = f.caveats.to_s
-      caveats << "#{s.chomp}\n" unless s.empty?
+      build = formula.build
+      formula.build = Tab.for_formula(formula)
+      string = formula.caveats.to_s
+      caveats << "#{string.chomp}\n" unless string.empty?
     ensure
-      f.build = build
+      formula.build = build
     end
     caveats << keg_only_text
 
@@ -47,69 +49,73 @@ class Caveats
 
   delegate [:empty?, :to_s] => :caveats
 
+  sig { params(skip_reason: T::Boolean).returns(T.nilable(String)) }
   def keg_only_text(skip_reason: false)
-    return unless f.keg_only?
+    return unless formula.keg_only?
 
     s = if skip_reason
       ""
     else
       <<~EOS
-        #{f.name} is keg-only, which means it was not symlinked into #{HOMEBREW_PREFIX},
-        because #{f.keg_only_reason.to_s.chomp}.
+        #{formula.name} is keg-only, which means it was not symlinked into #{HOMEBREW_PREFIX},
+        because #{formula.keg_only_reason.to_s.chomp}.
       EOS
     end.dup
 
-    if f.bin.directory? || f.sbin.directory?
+    if formula.bin.directory? || formula.sbin.directory?
       s << <<~EOS
 
-        If you need to have #{f.name} first in your PATH, run:
+        If you need to have #{formula.name} first in your PATH, run:
       EOS
-      s << "  #{Utils::Shell.prepend_path_in_profile(f.opt_bin.to_s)}\n" if f.bin.directory?
-      s << "  #{Utils::Shell.prepend_path_in_profile(f.opt_sbin.to_s)}\n" if f.sbin.directory?
+      s << "  #{Utils::Shell.prepend_path_in_profile(formula.opt_bin.to_s)}\n" if formula.bin.directory?
+      s << "  #{Utils::Shell.prepend_path_in_profile(formula.opt_sbin.to_s)}\n" if formula.sbin.directory?
     end
 
-    if f.lib.directory? || f.include.directory?
+    if formula.lib.directory? || formula.include.directory?
       s << <<~EOS
 
-        For compilers to find #{f.name} you may need to set:
+        For compilers to find #{formula.name} you may need to set:
       EOS
 
-      s << "  #{Utils::Shell.export_value("LDFLAGS", "-L#{f.opt_lib}")}\n" if f.lib.directory?
+      s << "  #{Utils::Shell.export_value("LDFLAGS", "-L#{formula.opt_lib}")}\n" if formula.lib.directory?
 
-      s << "  #{Utils::Shell.export_value("CPPFLAGS", "-I#{f.opt_include}")}\n" if f.include.directory?
+      s << "  #{Utils::Shell.export_value("CPPFLAGS", "-I#{formula.opt_include}")}\n" if formula.include.directory?
 
-      if which("pkg-config", ENV["HOMEBREW_PATH"]) &&
-         ((f.lib/"pkgconfig").directory? || (f.share/"pkgconfig").directory?)
+      if which("pkg-config", ORIGINAL_PATHS) &&
+         ((formula.lib/"pkgconfig").directory? || (formula.share/"pkgconfig").directory?)
         s << <<~EOS
 
-          For pkg-config to find #{f.name} you may need to set:
+          For pkg-config to find #{formula.name} you may need to set:
         EOS
 
-        if (f.lib/"pkgconfig").directory?
-          s << "  #{Utils::Shell.export_value("PKG_CONFIG_PATH", "#{f.opt_lib}/pkgconfig")}\n"
+        if (formula.lib/"pkgconfig").directory?
+          s << "  #{Utils::Shell.export_value("PKG_CONFIG_PATH", "#{formula.opt_lib}/pkgconfig")}\n"
         end
 
-        if (f.share/"pkgconfig").directory?
-          s << "  #{Utils::Shell.export_value("PKG_CONFIG_PATH", "#{f.opt_share}/pkgconfig")}\n"
+        if (formula.share/"pkgconfig").directory?
+          s << "  #{Utils::Shell.export_value("PKG_CONFIG_PATH", "#{formula.opt_share}/pkgconfig")}\n"
         end
       end
     end
-    s << "\n"
+    s << "\n" unless s.end_with?("\n")
+    s
   end
 
   private
 
+  sig { returns(T.nilable(Keg)) }
   def keg
-    @keg ||= [f.prefix, f.opt_prefix, f.linked_keg].map do |d|
+    @keg ||= T.let([formula.prefix, formula.opt_prefix, formula.linked_keg].filter_map do |d|
       Keg.new(d.resolved_path)
     rescue
       nil
-    end.compact.first
+    end.first, T.nilable(Keg))
   end
 
+  sig { params(shell: Symbol).returns(T.nilable(String)) }
   def function_completion_caveats(shell)
-    return unless keg
-    return unless which(shell.to_s, ENV["HOMEBREW_PATH"])
+    return unless (keg = self.keg)
+    return unless which(shell.to_s, ORIGINAL_PATHS)
 
     completion_installed = keg.completion_installed?(shell)
     functions_installed = keg.functions_installed?(shell)
@@ -119,7 +125,7 @@ class Caveats
     installed << "completions" if completion_installed
     installed << "functions" if functions_installed
 
-    root_dir = f.keg_only? ? f.opt_prefix : HOMEBREW_PREFIX
+    root_dir = formula.keg_only? ? formula.opt_prefix : HOMEBREW_PREFIX
 
     case shell
     when :bash
@@ -127,69 +133,60 @@ class Caveats
         Bash completion has been installed to:
           #{root_dir}/etc/bash_completion.d
       EOS
+    when :fish
+      fish_caveats = "fish #{installed.join(" and ")} have been installed to:"
+      fish_caveats << "\n  #{root_dir}/share/fish/vendor_completions.d" if completion_installed
+      fish_caveats << "\n  #{root_dir}/share/fish/vendor_functions.d" if functions_installed
+      fish_caveats.freeze
     when :zsh
       <<~EOS
         zsh #{installed.join(" and ")} have been installed to:
           #{root_dir}/share/zsh/site-functions
       EOS
-    when :fish
-      fish_caveats = +"fish #{installed.join(" and ")} have been installed to:"
-      fish_caveats << "\n  #{root_dir}/share/fish/vendor_completions.d" if completion_installed
-      fish_caveats << "\n  #{root_dir}/share/fish/vendor_functions.d" if functions_installed
-      fish_caveats.freeze
     end
   end
 
+  sig { returns(T.nilable(String)) }
   def elisp_caveats
-    return if f.keg_only?
-    return unless keg
+    return if formula.keg_only?
+    return unless (keg = self.keg)
     return unless keg.elisp_installed?
 
     <<~EOS
       Emacs Lisp files have been installed to:
-        #{HOMEBREW_PREFIX}/share/emacs/site-lisp/#{f.name}
+        #{HOMEBREW_PREFIX}/share/emacs/site-lisp/#{formula.name}
     EOS
   end
 
+  sig { returns(T.nilable(String)) }
   def service_caveats
-    return if !f.plist && !f.service? && !keg&.plist_installed?
+    return if !formula.service? && !Utils::Service.installed?(formula) && !keg&.plist_installed?
+    return if formula.service? && !formula.service.command? && !Utils::Service.installed?(formula)
 
     s = []
 
-    command = if f.service?
-      f.service.manual_command
-    else
-      f.plist_manual
-    end
-
-    return <<~EOS if !which("launchctl") && f.plist
-      #{Formatter.warning("Warning:")} #{f.name} provides a launchd plist which can only be used on macOS!
-      You can manually execute the service instead with:
-        #{command}
-    EOS
-
     # Brew services only works with these two tools
-    return <<~EOS if !which("systemctl") && !which("launchctl") && f.service?
-      #{Formatter.warning("Warning:")} #{f.name} provides a service which can only be used on macOS or systemd!
+    return <<~EOS if !Utils::Service.systemctl? && !Utils::Service.launchctl? && formula.service.command?
+      #{Formatter.warning("Warning:")} #{formula.name} provides a service which can only be used on macOS or systemd!
       You can manually execute the service instead with:
-        #{command}
+        #{formula.service.manual_command}
     EOS
 
-    is_running_service = f.service? && quiet_system("ps aux | grep #{f.service.command&.first}")
-    if is_running_service || (f.plist && quiet_system("/bin/launchctl list #{f.plist_name} &>/dev/null"))
-      s << "To restart #{f.full_name} after an upgrade:"
-      s << "  #{f.plist_startup ? "sudo " : ""}brew services restart #{f.full_name}"
-    elsif f.plist_startup
-      s << "To start #{f.full_name} now and restart at startup:"
-      s << "  sudo brew services start #{f.full_name}"
+    startup = formula.service.requires_root?
+    if Utils::Service.running?(formula)
+      s << "To restart #{formula.full_name} after an upgrade:"
+      s << "  #{startup ? "sudo " : ""}brew services restart #{formula.full_name}"
+    elsif startup
+      s << "To start #{formula.full_name} now and restart at startup:"
+      s << "  sudo brew services start #{formula.full_name}"
     else
-      s << "To start #{f.full_name} now and restart at login:"
-      s << "  brew services start #{f.full_name}"
+      s << "To start #{formula.full_name} now and restart at login:"
+      s << "  brew services start #{formula.full_name}"
     end
 
-    if f.plist_manual || f.service?
+    if formula.service.command?
       s << "Or, if you don't want/need a background service you can just run:"
-      s << "  #{command}"
+      s << "  #{formula.service.manual_command}"
     end
 
     # pbpaste is the system clipboard tool on macOS and fails with `tmux` by default

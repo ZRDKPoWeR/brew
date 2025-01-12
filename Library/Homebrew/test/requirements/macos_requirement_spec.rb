@@ -1,10 +1,12 @@
-# typed: false
 # frozen_string_literal: true
 
 require "requirements/macos_requirement"
 
-describe MacOSRequirement do
+RSpec.describe MacOSRequirement do
   subject(:requirement) { described_class.new }
+
+  let(:macos_oldest_allowed) { MacOSVersion.new(HOMEBREW_MACOS_OLDEST_ALLOWED) }
+  let(:big_sur_major) { MacOSVersion.new("11.0") }
 
   describe "#satisfied?" do
     it "returns true on macOS" do
@@ -20,5 +22,31 @@ describe MacOSRequirement do
       requirement = described_class.new([:catalina], comparator: "<=")
       expect(requirement.satisfied?).to eq MacOS.version <= :catalina
     end
+  end
+
+  specify "#minimum_version" do
+    no_requirement = described_class.new
+    max_requirement = described_class.new([:big_sur], comparator: "<=")
+    min_requirement = described_class.new([:big_sur], comparator: ">=")
+    exact_requirement = described_class.new([:big_sur], comparator: "==")
+    range_requirement = described_class.new([[:monterey, :big_sur]], comparator: "==")
+    expect(no_requirement.minimum_version).to eq macos_oldest_allowed
+    expect(max_requirement.minimum_version).to eq macos_oldest_allowed
+    expect(min_requirement.minimum_version).to eq big_sur_major
+    expect(exact_requirement.minimum_version).to eq big_sur_major
+    expect(range_requirement.minimum_version).to eq big_sur_major
+  end
+
+  specify "#allows?" do
+    no_requirement = described_class.new
+    max_requirement = described_class.new([:mojave], comparator: "<=")
+    min_requirement = described_class.new([:catalina], comparator: ">=")
+    exact_requirement = described_class.new([:big_sur], comparator: "==")
+    range_requirement = described_class.new([[:monterey, :big_sur]], comparator: "==")
+    expect(no_requirement.allows?(big_sur_major)).to be true
+    expect(max_requirement.allows?(big_sur_major)).to be false
+    expect(min_requirement.allows?(big_sur_major)).to be true
+    expect(exact_requirement.allows?(big_sur_major)).to be true
+    expect(range_requirement.allows?(big_sur_major)).to be true
   end
 end
