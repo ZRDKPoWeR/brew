@@ -1,17 +1,16 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-require "rubocops/extend/formula"
+require "rubocops/extend/formula_cop"
 
 module RuboCop
   module Cop
     module FormulaAudit
       # This cop makes sure that deprecated checksums are not used.
-      #
-      # @api private
       class Checksum < FormulaCop
-        def audit_formula(_node, _class_node, _parent_class_node, body_node)
-          return if body_node.nil?
+        sig { override.params(formula_nodes: FormulaNodes).void }
+        def audit_formula(formula_nodes)
+          body_node = formula_nodes.body_node
 
           problem "MD5 checksums are deprecated, please use SHA-256" if method_called_ever?(body_node, :md5)
 
@@ -43,15 +42,12 @@ module RuboCop
       end
 
       # This cop makes sure that checksum strings are lowercase.
-      #
-      # @api private
       class ChecksumCase < FormulaCop
         extend AutoCorrector
 
-        def audit_formula(_node, _class_node, _parent_class_node, body_node)
-          return if body_node.nil?
-
-          sha256_calls = find_every_method_call_by_name(body_node, :sha256)
+        sig { override.params(formula_nodes: FormulaNodes).void }
+        def audit_formula(formula_nodes)
+          sha256_calls = find_every_method_call_by_name(formula_nodes.body_node, :sha256)
           sha256_calls.each do |sha256_call|
             checksum = get_checksum_node(sha256_call)
             next if checksum.nil?

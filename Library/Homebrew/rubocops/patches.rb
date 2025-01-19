@@ -1,8 +1,7 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-require "rubocops/extend/formula"
-require "extend/string"
+require "rubocops/extend/formula_cop"
 
 module RuboCop
   module Cop
@@ -10,20 +9,23 @@ module RuboCop
       # This cop audits `patch`es in formulae.
       # TODO: Many of these could be auto-corrected.
       class Patches < FormulaCop
-        extend T::Sig
         extend AutoCorrector
 
-        def audit_formula(node, _class_node, _parent_class_node, body)
+        sig { override.params(formula_nodes: FormulaNodes).void }
+        def audit_formula(formula_nodes)
+          node = formula_nodes.node
           @full_source_content = source_buffer(node).source
 
-          external_patches = find_all_blocks(body, :patch)
+          return if (body_node = formula_nodes.body_node).nil?
+
+          external_patches = find_all_blocks(body_node, :patch)
           external_patches.each do |patch_block|
             url_node = find_every_method_call_by_name(patch_block, :url).first
             url_string = parameters(url_node).first
             patch_problems(url_string)
           end
 
-          inline_patches = find_every_method_call_by_name(body, :patch)
+          inline_patches = find_every_method_call_by_name(body_node, :patch)
           inline_patches.each { |patch| inline_patch_problems(patch) }
 
           if inline_patches.empty? && patch_end?
@@ -31,7 +33,7 @@ module RuboCop
             add_offense(@offense_source_range, message: "patch is missing 'DATA'")
           end
 
-          patches_node = find_method_def(body, :patches)
+          patches_node = find_method_def(body_node, :patches)
           return if patches_node.nil?
 
           legacy_patches = find_strings(patches_node)

@@ -1,7 +1,6 @@
-# typed: false
 # frozen_string_literal: true
 
-describe "Mach-O" do
+RSpec.describe MachOShim do
   describe "Pathname tests" do
     specify "fat dylib" do
       pn = dylib_path("fat")

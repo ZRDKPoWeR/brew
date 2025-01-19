@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "options"
 
-describe DeprecatedOption do
+RSpec.describe DeprecatedOption do
   subject(:option) { described_class.new("foo", "bar") }
 
   specify "#old" do

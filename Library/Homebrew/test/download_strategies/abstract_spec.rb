@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "download_strategy"
 
-describe AbstractDownloadStrategy do
+RSpec.describe AbstractDownloadStrategy do
   subject(:strategy) { described_class.new(url, name, version, **specs) }
 
   let(:specs) { {} }
@@ -13,7 +12,7 @@ describe AbstractDownloadStrategy do
   let(:args) { %w[foo bar baz] }
 
   specify "#source_modified_time" do
-    Mktemp.new("mtime") do
+    mktmpdir("mtime").cd do
       FileUtils.touch "foo", mtime: Time.now - 10
       FileUtils.touch "bar", mtime: Time.now - 100
       FileUtils.ln_s "not-exist", "baz"
@@ -25,13 +24,13 @@ describe AbstractDownloadStrategy do
     let(:specs) { { bottle: true } }
 
     it "extends Pourable" do
-      expect(strategy).to be_a_kind_of(AbstractDownloadStrategy::Pourable)
+      expect(strategy).to be_a(AbstractDownloadStrategy::Pourable)
     end
   end
 
   context "without specs[:bottle]" do
     it "is does not extend Pourable" do
-      expect(strategy).not_to be_a_kind_of(AbstractDownloadStrategy::Pourable)
+      expect(strategy).not_to be_a(AbstractDownloadStrategy::Pourable)
     end
   end
 end

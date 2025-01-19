@@ -4,16 +4,12 @@
 require "hardware"
 require "extend/ENV/shared"
 
-# @api private
 module Stdenv
-  extend T::Sig
-
   include SharedEnvExtension
 
-  # @private
   SAFE_CFLAGS_FLAGS = "-w -pipe"
+  private_constant :SAFE_CFLAGS_FLAGS
 
-  # @private
   sig {
     params(
       formula:         T.nilable(Formula),
@@ -21,14 +17,16 @@ module Stdenv
       build_bottle:    T.nilable(T::Boolean),
       bottle_arch:     T.nilable(String),
       testing_formula: T::Boolean,
+      debug_symbols:   T.nilable(T::Boolean),
     ).void
   }
-  def setup_build_environment(formula: nil, cc: nil, build_bottle: false, bottle_arch: nil, testing_formula: false)
+  def setup_build_environment(formula: nil, cc: nil, build_bottle: false, bottle_arch: nil, testing_formula: false,
+                              debug_symbols: false)
     super
 
     self["HOMEBREW_ENV"] = "std"
 
-    PATH.new(ENV["HOMEBREW_PATH"]).reverse_each { |p| prepend_path "PATH", p }
+    ORIGINAL_PATHS.reverse_each { |p| prepend_path "PATH", p }
     prepend_path "PATH", HOMEBREW_SHIMS_PATH/"shared"
 
     # Set the default pkg-config search path, overriding the built-in paths
@@ -36,8 +34,9 @@ module Stdenv
     self["PKG_CONFIG_LIBDIR"] = determine_pkg_config_libdir
 
     self["MAKEFLAGS"] = "-j#{make_jobs}"
+    self["RUSTFLAGS"] = Hardware.rustflags_target_cpu(effective_arch)
 
-    unless HOMEBREW_PREFIX.to_s == "/usr/local"
+    if HOMEBREW_PREFIX.to_s != "/usr/local"
       # /usr/local is already an -isystem and -L directory so we skip it
       self["CPPFLAGS"] = "-isystem#{HOMEBREW_PREFIX}/include"
       self["LDFLAGS"] = "-L#{HOMEBREW_PREFIX}/lib"
@@ -55,7 +54,14 @@ module Stdenv
     # Os is the default Apple uses for all its stuff so let's trust them
     define_cflags "-Os #{SAFE_CFLAGS_FLAGS}"
 
-    send(compiler)
+    begin
+      send(compiler)
+    rescue CompilerSelectionError
+      # We don't care if our compiler fails to build the formula during `brew test`.
+      raise unless testing_formula
+
+      send(DevelopmentTools.default_compiler)
+    end
 
     return unless cc&.match?(GNU_GCC_REGEXP)
 
@@ -63,11 +69,6 @@ module Stdenv
     append_path "PATH", gcc_formula.opt_bin.to_s
   end
   alias generic_setup_build_environment setup_build_environment
-
-  sig { returns(T::Array[Pathname]) }
-  def homebrew_extra_pkg_config_paths
-    []
-  end
 
   sig { returns(T.nilable(PATH)) }
   def determine_pkg_config_libdir
@@ -127,7 +128,7 @@ module Stdenv
 
   sig { void }
   def clang
-    super()
+    super
     replace_in_cflags(/-Xarch_#{Hardware::CPU.arch_32_bit} (-march=\S*)/, '\1')
     map = Hardware::CPU.optimization_flags.dup
     if DevelopmentTools.clang_build_version < 700
@@ -148,7 +149,8 @@ module Stdenv
     append "CXX", "-stdlib=libc++" if compiler == :clang
   end
 
-  # @private
+  private
+
   sig { params(before: Regexp, after: String).void }
   def replace_in_cflags(before, after)
     CC_FLAG_VARS.each do |key|
@@ -164,7 +166,6 @@ module Stdenv
 
   # Sets architecture-specific flags for every environment variable
   # given in the list `flags`.
-  # @private
   sig { params(flags: T::Array[String], map: T::Hash[Symbol, String]).void }
   def set_cpu_flags(flags, map = Hardware::CPU.optimization_flags)
     cflags =~ /(-Xarch_#{Hardware::CPU.arch_32_bit} )-march=/
@@ -177,21 +178,15 @@ module Stdenv
     append flags, map.fetch(effective_arch)
   end
 
-  # @private
+  sig { returns(T::Array[Pathname]) }
+  def homebrew_extra_pkg_config_paths
+    []
+  end
+
   sig { params(map: T::Hash[Symbol, String]).void }
-  def set_cpu_cflags(map = Hardware::CPU.optimization_flags) # rubocop:disable Naming/AccessorMethodName
+  def set_cpu_cflags(map = Hardware::CPU.optimization_flags)
     set_cpu_flags(CC_FLAG_VARS, map)
   end
-
-  sig { returns(Integer) }
-  def make_jobs
-    Homebrew::EnvConfig.make_jobs.to_i
-  end
-
-  # This method does nothing in stdenv since there's no arg refurbishment
-  # @private
-  sig { void }
-  def refurbish_args; end
 end
 
 require "extend/os/extend/ENV/std"

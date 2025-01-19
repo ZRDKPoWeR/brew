@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "livecheck/strategy"
 
-describe Homebrew::Livecheck::Strategy do
+RSpec.describe Homebrew::Livecheck::Strategy do
   subject(:strategy) { described_class }
 
   describe "::from_symbol" do

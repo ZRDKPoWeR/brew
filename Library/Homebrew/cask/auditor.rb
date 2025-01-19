@@ -1,41 +1,13 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "cask/audit"
 
 module Cask
   # Helper class for auditing all available languages of a cask.
-  #
-  # @api private
   class Auditor
-    def self.audit(
-      cask,
-      audit_download: nil,
-      audit_appcast: nil,
-      audit_online: nil,
-      audit_new_cask: nil,
-      audit_strict: nil,
-      audit_token_conflicts: nil,
-      quarantine: nil,
-      any_named_args: nil,
-      language: nil,
-      display_passes: nil,
-      display_failures_only: nil
-    )
-      new(
-        cask,
-        audit_download:        audit_download,
-        audit_appcast:         audit_appcast,
-        audit_online:          audit_online,
-        audit_new_cask:        audit_new_cask,
-        audit_strict:          audit_strict,
-        audit_token_conflicts: audit_token_conflicts,
-        quarantine:            quarantine,
-        any_named_args:        any_named_args,
-        language:              language,
-        display_passes:        display_passes,
-        display_failures_only: display_failures_only,
-      ).audit
+    def self.audit(cask, **options)
+      new(cask, **options).audit
     end
 
     attr_reader :cask, :language
@@ -43,55 +15,61 @@ module Cask
     def initialize(
       cask,
       audit_download: nil,
-      audit_appcast: nil,
       audit_online: nil,
       audit_strict: nil,
+      audit_signing: nil,
       audit_token_conflicts: nil,
       audit_new_cask: nil,
       quarantine: nil,
       any_named_args: nil,
       language: nil,
-      display_passes: nil,
-      display_failures_only: nil
+      only: [],
+      except: []
     )
       @cask = cask
       @audit_download = audit_download
-      @audit_appcast = audit_appcast
       @audit_online = audit_online
       @audit_new_cask = audit_new_cask
       @audit_strict = audit_strict
+      @audit_signing = audit_signing
       @quarantine = quarantine
       @audit_token_conflicts = audit_token_conflicts
       @any_named_args = any_named_args
       @language = language
-      @display_passes = display_passes
-      @display_failures_only = display_failures_only
+      @only = only
+      @except = except
     end
 
+    LANGUAGE_BLOCK_LIMIT = 10
+
     def audit
-      warnings = Set.new
       errors = Set.new
 
       if !language && language_blocks
-        language_blocks.each_key do |l|
+        sample_languages = if language_blocks.length > LANGUAGE_BLOCK_LIMIT && !@audit_new_cask
+          sample_keys = language_blocks.keys.sample(LANGUAGE_BLOCK_LIMIT)
+          ohai "Auditing a sample of available languages for #{cask}: " \
+               "#{sample_keys.map { |lang| lang[0].to_s }.to_sentence}"
+          language_blocks.select { |k| sample_keys.include?(k) }
+        else
+          language_blocks
+        end
+
+        sample_languages.each_key do |l|
           audit = audit_languages(l)
-          summary = audit.summary(include_passed: output_passed?, include_warnings: output_warnings?)
-          if summary.present? && output_summary?(audit)
+          if audit.summary.present? && output_summary?(audit)
             ohai "Auditing language: #{l.map { |lang| "'#{lang}'" }.to_sentence}" if output_summary?
-            puts summary
+            puts audit.summary
           end
-          warnings += audit.warnings
           errors += audit.errors
         end
       else
         audit = audit_cask_instance(cask)
-        summary = audit.summary(include_passed: output_passed?, include_warnings: output_warnings?)
-        puts summary if summary.present? && output_summary?(audit)
-        warnings += audit.warnings
+        puts audit.summary if audit.summary.present? && output_summary?(audit)
         errors += audit.errors
       end
 
-      { warnings: warnings, errors: errors }
+      errors
     end
 
     private
@@ -104,22 +82,9 @@ module Cask
       audit.errors?
     end
 
-    def output_passed?
-      return false if @display_failures_only.present?
-      return true if @display_passes.present?
-
-      false
-    end
-
-    def output_warnings?
-      return false if @display_failures_only.present?
-
-      true
-    end
-
     def audit_languages(languages)
       original_config = cask.config
-      localized_config = original_config.merge(Config.new(explicit: { languages: languages }))
+      localized_config = original_config.merge(Config.new(explicit: { languages: }))
       cask.config = localized_config
 
       audit_cask_instance(cask)
@@ -130,16 +95,17 @@ module Cask
     def audit_cask_instance(cask)
       audit = Audit.new(
         cask,
-        appcast:         @audit_appcast,
         online:          @audit_online,
         strict:          @audit_strict,
+        signing:         @audit_signing,
         new_cask:        @audit_new_cask,
         token_conflicts: @audit_token_conflicts,
         download:        @audit_download,
         quarantine:      @quarantine,
+        only:            @only,
+        except:          @except,
       )
       audit.run!
-      audit
     end
 
     def language_blocks

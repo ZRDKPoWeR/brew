@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "rubocops/class"
 
-describe RuboCop::Cop::FormulaAudit::Test do
+RSpec.describe RuboCop::Cop::FormulaAudit::Test do
   subject(:cop) { described_class.new }
 
   it "reports and corrects an offense when /usr/local/bin is found in test calls" do
@@ -13,7 +12,7 @@ describe RuboCop::Cop::FormulaAudit::Test do
 
         test do
           system "/usr/local/bin/test"
-                 ^^^^^^^^^^^^^^^^^^^^^ use \#{bin} instead of /usr/local/bin in system
+                 ^^^^^^^^^^^^^^^^^^^^^ FormulaAudit/Test: use \#{bin} instead of /usr/local/bin in system
         end
       end
     RUBY
@@ -36,7 +35,7 @@ describe RuboCop::Cop::FormulaAudit::Test do
 
         test do
           shell_output("\#{bin}/test", 0)
-                                      ^ Passing 0 to shell_output() is redundant
+                                      ^ FormulaAudit/Test: Passing 0 to shell_output() is redundant
         end
       end
     RUBY
@@ -58,7 +57,7 @@ describe RuboCop::Cop::FormulaAudit::Test do
         url 'https://brew.sh/foo-1.0.tgz'
 
         test do
-        ^^^^^^^ `test do` should not be empty
+        ^^^^^^^ FormulaAudit/Test: `test do` should not be empty
         end
       end
     RUBY
@@ -70,7 +69,7 @@ describe RuboCop::Cop::FormulaAudit::Test do
         url 'https://brew.sh/foo-1.0.tgz'
 
         test do
-        ^^^^^^^ `test do` should contain a real test
+        ^^^^^^^ FormulaAudit/Test: `test do` should contain a real test
           true
         end
       end

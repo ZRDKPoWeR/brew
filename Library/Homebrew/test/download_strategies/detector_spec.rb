@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "download_strategy"
 
-describe DownloadStrategyDetector do
+RSpec.describe DownloadStrategyDetector do
   describe "::detect" do
     subject(:strategy_detector) { described_class.detect(url, strategy) }
 
@@ -12,6 +11,12 @@ describe DownloadStrategyDetector do
 
     context "when given Git URL" do
       let(:url) { "git://example.com/foo.git" }
+
+      it { is_expected.to eq(GitDownloadStrategy) }
+    end
+
+    context "when given SSH Git URL" do
+      let(:url) { "ssh://git@example.com/foo.git" }
 
       it { is_expected.to eq(GitDownloadStrategy) }
     end
@@ -27,9 +32,9 @@ describe DownloadStrategyDetector do
     end
 
     it "raises an error when passed an unrecognized strategy" do
-      expect {
+      expect do
         described_class.detect("foo", Class.new)
-      }.to raise_error(TypeError)
+      end.to raise_error(TypeError)
     end
   end
 end

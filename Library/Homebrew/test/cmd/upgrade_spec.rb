@@ -1,9 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cmd/shared_examples/args_parse"
+require "cmd/upgrade"
 
-describe "brew upgrade" do
+RSpec.describe Homebrew::Cmd::UpgradeCmd do
   it_behaves_like "parseable arguments"
 
   it "upgrades a Formula and cleans up old versions", :integration_test do

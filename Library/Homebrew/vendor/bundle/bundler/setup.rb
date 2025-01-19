@@ -1,105 +1,119 @@
 require 'rbconfig'
-# ruby 1.8.7 doesn't define RUBY_ENGINE
-ruby_engine = defined?(RUBY_ENGINE) ? RUBY_ENGINE : 'ruby'
-ruby_version = RbConfig::CONFIG["ruby_version"]
-path = File.expand_path('..', __FILE__)
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/concurrent-ruby-1.1.9/lib/concurrent-ruby"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/i18n-1.8.11/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/minitest-5.14.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/tzinfo-2.0.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/zeitwerk-2.5.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/activesupport-6.1.4.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/public_suffix-4.0.6/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/addressable-2.8.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/ast-2.4.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/bindata-2.4.10/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/msgpack-1.4.2"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/msgpack-1.4.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/bootsnap-1.9.3"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/bootsnap-1.9.3/lib"
-$:.unshift "#{path}/"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/byebug-11.1.3"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/byebug-11.1.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/coderay-1.1.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/highline-2.0.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/commander-4.6.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/connection_pool-2.2.5/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/did_you_mean-1.5.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/diff-lcs-1.4.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/docile-1.4.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/unf_ext-0.0.8"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/unf_ext-0.0.8/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/unf-0.1.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/domain_name-0.5.20190701/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/regexp_parser-2.1.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/ecma-re-validator-0.3.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/elftools-1.1.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/hana-1.3.7/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/hpricot-0.8.6"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/hpricot-0.8.6/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/http-cookie-1.0.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/uri_template-0.7.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/json_schemer-0.2.18/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/mime-types-data-3.2021.1115/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/mime-types-3.4.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/net-http-digest_auth-1.4.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/net-http-persistent-4.0.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/mini_portile2-2.6.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/racc-1.6.0"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/racc-1.6.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/nokogiri-1.12.5-x86_64-darwin/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubyntlm-0.6.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/webrick-1.7.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/webrobots-0.1.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/mechanize-2.8.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/method_source-1.0.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/mustache-1.1.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/parallel-1.21.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/parallel_tests-3.7.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/parser-3.0.3.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rainbow-3.0.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/sorbet-runtime-0.5.9368/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/parlour-6.0.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/patchelf-1.3.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/plist-3.6.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/pry-0.14.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rack-2.2.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/unparser-0.6.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rbi-0.0.8/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/extensions/x86_64-darwin-14/2.6.0-static/rdiscount-2.2.0.2"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rdiscount-2.2.0.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rexml-3.2.5/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/ronn-0.7.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-support-3.10.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-core-3.10.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-expectations-3.10.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-mocks-3.10.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-3.10.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-github-2.3.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-its-1.3.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-retry-0.6.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/sorbet-static-0.5.9368-universal-darwin-14/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/sorbet-0.5.9368/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-sorbet-1.8.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec-wait-0.0.9/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rspec_junit_formatter-0.4.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-ast-1.13.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/ruby-progressbar-1.11.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/unicode-display_width-2.1.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-1.23.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-performance-1.12.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-rails-2.12.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-rspec-2.6.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/rubocop-sorbet-0.6.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/ruby-macho-2.5.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/simplecov-html-0.12.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/simplecov_json_formatter-0.1.3/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/simplecov-0.21.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/simplecov-cobertura-1.4.2/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/sorbet-runtime-stub-0.2.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/thor-1.1.0/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/spoom-1.1.5/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/yard-0.9.26/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/yard-sorbet-0.6.1/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/tapioca-0.5.4/lib"
-$:.unshift "#{path}/../#{ruby_engine}/#{ruby_version}/gems/warning-1.2.1/lib"
+module Kernel
+  remove_method(:gem) if private_method_defined?(:gem)
+
+  def gem(*)
+  end
+
+  private :gem
+end
+unless defined?(Gem)
+  module Gem
+    def self.ruby_api_version
+      RbConfig::CONFIG["ruby_version"]
+    end
+
+    def self.extension_api_version
+      if 'no' == RbConfig::CONFIG['ENABLE_SHARED']
+        "#{ruby_api_version}-static"
+      else
+        ruby_api_version
+      end
+    end
+  end
+end
+if Gem.respond_to?(:discover_gems_on_require=)
+  Gem.discover_gems_on_require = false
+else
+  [::Kernel.singleton_class, ::Kernel].each do |k|
+    if k.private_method_defined?(:gem_original_require)
+      private_require = k.private_method_defined?(:require)
+      k.send(:remove_method, :require)
+      k.send(:define_method, :require, k.instance_method(:gem_original_require))
+      k.send(:private, :require) if private_require
+    end
+  end
+end
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/public_suffix-6.0.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/addressable-2.8.7/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/ast-2.4.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/base64-0.2.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/benchmark-0.4.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/bigdecimal-3.1.9")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/bigdecimal-3.1.9/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/bindata-2.5.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/coderay-1.1.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/concurrent-ruby-1.3.5/lib/concurrent-ruby")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/diff-lcs-1.5.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/docile-1.4.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/elftools-1.3.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/erubi-1.13.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/hana-1.3.7/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/json-2.9.1")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/json-2.9.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/regexp_parser-2.10.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/simpleidn-0.2.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/json_schemer-2.3.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rexml-3.4.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/kramdown-2.5.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/language_server-protocol-3.17.0.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/logger-1.6.5/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/method_source-1.1.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/minitest-5.25.4/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/netrc-0.11.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/parallel-1.26.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/parallel_tests-4.9.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/racc-1.8.1")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/racc-1.8.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/parser-3.3.7.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/patchelf-1.5.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/plist-3.7.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/prism-1.3.0")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/prism-1.3.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/pry-0.15.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rainbow-3.1.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/sorbet-runtime-0.5.11763/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rbi-0.2.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/rbs-3.8.1")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rbs-3.8.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/redcarpet-3.6.0")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/redcarpet-3.6.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-support-3.13.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-core-3.13.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-expectations-3.13.3/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-mocks-3.13.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-3.13.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-github-3.0.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-retry-0.6.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec-sorbet-1.9.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rspec_junit_formatter-0.6.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-ast-1.37.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/ruby-progressbar-1.13.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/unicode-emoji-4.0.4/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/unicode-display_width-3.1.4/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-1.70.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-md-1.2.4/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-performance-1.23.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-rspec-3.3.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/rubocop-sorbet-0.8.7/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/ruby-lsp-0.23.6/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/ruby-macho-4.1.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/ruby-prof-1.7.1")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/ruby-prof-1.7.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/simplecov-html-0.13.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/simplecov_json_formatter-0.1.4/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/simplecov-0.22.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/simplecov-cobertura-2.1.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/sorbet-static-0.5.11763-universal-darwin/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/sorbet-0.5.11763/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/sorbet-static-and-runtime-0.5.11763/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/thor-1.3.2/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/spoom-1.5.1/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/stackprof-0.2.27")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/stackprof-0.2.27/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/yard-0.9.37/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/yard-sorbet-0.9.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/tapioca-0.16.8/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/extensions/arm64-darwin-20/#{Gem.extension_api_version}/vernier-1.5.0")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/vernier-1.5.0/lib")
+$:.unshift File.expand_path("#{__dir__}/../#{RUBY_ENGINE}/#{Gem.ruby_api_version}/gems/warning-1.5.0/lib")

@@ -1,7 +1,8 @@
-# typed: false
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
-require "os/mac/version"
+require "macos_version"
+
 require "os/mac/xcode"
 require "os/mac/sdk"
 require "os/mac/keg"
@@ -9,56 +10,67 @@ require "os/mac/keg"
 module OS
   # Helper module for querying system information on macOS.
   module Mac
-    extend T::Sig
-
-    module_function
-
-    # rubocop:disable Naming/ConstantName
-    # rubocop:disable Style/MutableConstant
-    ::MacOS = OS::Mac
-    # rubocop:enable Naming/ConstantName
-    # rubocop:enable Style/MutableConstant
-
     raise "Loaded OS::Mac on generic OS!" if ENV["HOMEBREW_TEST_GENERIC_OS"]
+
+    # This check is the only acceptable or necessary one in this file.
+    # rubocop:disable Homebrew/MoveToExtendOS
+    raise "Loaded OS::Mac on Linux!" if OS.linux?
+    # rubocop:enable Homebrew/MoveToExtendOS
+
+    # Provide MacOS alias for backwards compatibility and nicer APIs.
+    ::MacOS = OS::Mac
+
+    VERSION = ENV.fetch("HOMEBREW_MACOS_VERSION").chomp.freeze
+    private_constant :VERSION
 
     # This can be compared to numerics, strings, or symbols
     # using the standard Ruby Comparable methods.
-    sig { returns(Version) }
-    def version
+    #
+    # @api internal
+    sig { returns(MacOSVersion) }
+    def self.version
       @version ||= full_version.strip_patch
     end
 
     # This can be compared to numerics, strings, or symbols
     # using the standard Ruby Comparable methods.
-    sig { returns(Version) }
-    def full_version
-      @full_version ||= Version.new((ENV["HOMEBREW_MACOS_VERSION"]).chomp)
+    #
+    # @api internal
+    sig { returns(MacOSVersion) }
+    def self.full_version
+      @full_version ||= if (fake_macos = ENV.fetch("HOMEBREW_FAKE_MACOS", nil)) # for Portable Ruby building
+        MacOSVersion.new(fake_macos)
+      else
+        MacOSVersion.new(VERSION)
+      end
     end
 
-    sig { params(version: Version).void }
-    def full_version=(version)
-      @full_version = Version.new(version.chomp)
+    sig { params(version: String).void }
+    def self.full_version=(version)
+      @full_version = MacOSVersion.new(version.chomp)
       @version = nil
     end
 
     sig { returns(::Version) }
-    def latest_sdk_version
+    def self.latest_sdk_version
       # TODO: bump version when new Xcode macOS SDK is released
       # NOTE: We only track the major version of the SDK.
-      ::Version.new("12")
+      ::Version.new("15")
     end
-    private :latest_sdk_version
 
     sig { returns(String) }
-    def preferred_perl_version
-      if version >= :big_sur
+    def self.preferred_perl_version
+      if version >= :sonoma
+        "5.34"
+      elsif version >= :big_sur
         "5.30"
       else
         "5.18"
       end
     end
 
-    def languages
+    sig { returns(T::Array[String]) }
+    def self.languages
       return @languages if @languages
 
       os_langs = Utils.popen_read("defaults", "read", "-g", "AppleLanguages")
@@ -71,17 +83,17 @@ module OS
       @languages = os_langs
     end
 
-    def language
+    def self.language
       languages.first
     end
 
     sig { returns(String) }
-    def active_developer_dir
+    def self.active_developer_dir
       @active_developer_dir ||= Utils.popen_read("/usr/bin/xcode-select", "-print-path").strip
     end
 
     sig { returns(T::Boolean) }
-    def sdk_root_needed?
+    def self.sdk_root_needed?
       if MacOS::CLT.installed?
         # If there's no CLT SDK, return false
         return false unless MacOS::CLT.provides_sdk?
@@ -102,7 +114,7 @@ module OS
     # If no specific SDK is requested, the SDK matching the OS version is returned,
     # if available. Otherwise, the latest SDK is returned.
 
-    def sdk_locator
+    def self.sdk_locator
       if CLT.installed? && CLT.provides_sdk?
         CLT.sdk_locator
       else
@@ -110,31 +122,31 @@ module OS
       end
     end
 
-    def sdk(v = nil)
-      sdk_locator.sdk_if_applicable(v)
+    def self.sdk(version = nil)
+      sdk_locator.sdk_if_applicable(version)
     end
 
-    def sdk_for_formula(f, v = nil, check_only_runtime_requirements: false)
+    def self.sdk_for_formula(formula, version = nil, check_only_runtime_requirements: false)
       # If the formula requires Xcode, don't return the CLT SDK
       # If check_only_runtime_requirements is true, don't necessarily return the
       # Xcode SDK if the XcodeRequirement is only a build or test requirement.
-      return Xcode.sdk if f.requirements.any? do |req|
+      return Xcode.sdk if formula.requirements.any? do |req|
         next false unless req.is_a? XcodeRequirement
         next false if check_only_runtime_requirements && req.build? && !req.test?
 
         true
       end
 
-      sdk(v)
+      sdk(version)
     end
 
     # Returns the path to an SDK or nil, following the rules set by {sdk}.
-    def sdk_path(v = nil)
-      s = sdk(v)
+    def self.sdk_path(version = nil)
+      s = sdk(version)
       s&.path
     end
 
-    def sdk_path_if_needed(v = nil)
+    def self.sdk_path_if_needed(version = nil)
       # Prefer CLT SDK when both Xcode and the CLT are installed.
       # Expected results:
       # 1. On Xcode-only systems, return the Xcode SDK.
@@ -145,7 +157,7 @@ module OS
 
       return unless sdk_root_needed?
 
-      sdk_path(v)
+      sdk_path(version)
     end
 
     # See these issues for some history:
@@ -153,7 +165,7 @@ module OS
     # - {https://github.com/Homebrew/legacy-homebrew/issues/13}
     # - {https://github.com/Homebrew/legacy-homebrew/issues/41}
     # - {https://github.com/Homebrew/legacy-homebrew/issues/48}
-    def macports_or_fink
+    def self.macports_or_fink
       paths = []
 
       # First look in the path because MacPorts is relocatable and Fink
@@ -183,28 +195,33 @@ module OS
     end
 
     sig { params(ids: String).returns(T.nilable(Pathname)) }
-    def app_with_bundle_id(*ids)
-      path = mdfind(*ids)
-             .reject { |p| p.include?("/Backups.backupdb/") }
-             .first
-      Pathname.new(path) if path.present?
+    def self.app_with_bundle_id(*ids)
+      require "bundle_version"
+
+      paths = mdfind(*ids).filter_map do |bundle_path|
+        Pathname.new(bundle_path) if bundle_path.exclude?("/Backups.backupdb/")
+      end
+      return paths.first unless paths.all? { |bp| (bp/"Contents/Info.plist").exist? }
+
+      # Prefer newest one, if we can find it.
+      paths.max_by { |bundle_path| Homebrew::BundleVersion.from_info_plist(bundle_path/"Contents/Info.plist") }
     end
 
     sig { params(ids: String).returns(T::Array[String]) }
-    def mdfind(*ids)
+    def self.mdfind(*ids)
       (@mdfind ||= {}).fetch(ids) do
         @mdfind[ids] = Utils.popen_read("/usr/bin/mdfind", mdfind_query(*ids)).split("\n")
       end
     end
 
-    def pkgutil_info(id)
+    def self.pkgutil_info(id)
       (@pkginfo ||= {}).fetch(id) do |key|
         @pkginfo[key] = Utils.popen_read("/usr/sbin/pkgutil", "--pkg-info", key).strip
       end
     end
 
     sig { params(ids: String).returns(String) }
-    def mdfind_query(*ids)
+    def self.mdfind_query(*ids)
       ids.map! { |id| "kMDItemCFBundleIdentifier == #{id}" }.join(" || ")
     end
   end

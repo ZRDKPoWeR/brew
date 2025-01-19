@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "formula_support"
 
-describe KegOnlyReason do
+RSpec.describe KegOnlyReason do
   describe "#to_s" do
     it "returns the reason provided" do
       r = described_class.new :provided_by_macos, "test"

@@ -1,13 +1,38 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cmd/shared_examples/args_parse"
 require "dev-cmd/bottle"
 
-describe "brew bottle" do
+RSpec.describe Homebrew::DevCmd::Bottle do
+  def stub_hash(parameters)
+    <<~EOS
+      {
+        "#{parameters[:name]}":{
+           "formula":{
+              "pkg_version":"#{parameters[:version]}",
+              "path":"#{parameters[:path]}"
+           },
+           "bottle":{
+              "root_url":"#{parameters[:root_url] || HOMEBREW_BOTTLE_DEFAULT_DOMAIN}",
+              "prefix":"/usr/local",
+              "cellar":"#{parameters[:cellar]}",
+              "rebuild":0,
+              "tags":{
+                 "#{parameters[:os]}":{
+                    "filename":"#{parameters[:filename]}",
+                    "local_filename":"#{parameters[:local_filename]}",
+                    "sha256":"#{parameters[:sha256]}"
+                 }
+              }
+           }
+        }
+      }
+    EOS
+  end
+
   it_behaves_like "parseable arguments"
 
-  it "builds a bottle for the given Formula", :integration_test do
+  it "builds a bottle for the given Formula", :integration_test, :needs_network do
     install_test_formula "testball", build_bottle: true
 
     # `brew bottle` should not fail with dead symlink
@@ -21,13 +46,14 @@ describe "brew bottle" do
         .to output(/testball--0\.1.*\.bottle\.tar\.gz/).to_stdout
         .and not_to_output.to_stderr
         .and be_a_success
+      expect(HOMEBREW_CELLAR/"testball-bottle.tar").not_to exist
     ensure
       FileUtils.rm_f Dir.glob("testball--0.1*.bottle.tar.gz")
     end
   end
 
   describe "--merge", :integration_test do
-    let(:core_tap) { CoreTap.new }
+    let(:core_tap) { CoreTap.instance }
     let(:tarball) do
       if OS.linux?
         TEST_FIXTURE_DIR/"tarballs/testball-0.1-linux.tbz"
@@ -79,20 +105,22 @@ describe "brew bottle" do
 
     it "adds the bottle block to a formula that has none" do
       core_tap.path.cd do
-        system "git", "init"
+        system "git", "-c", "init.defaultBranch=master", "init"
         setup_test_formula "testball"
         system "git", "add", "--all"
         system "git", "commit", "-m", "testball 0.1"
       end
 
-      expect {
+      # RuboCop would align the `.and` with `.to_stdout` which is too floaty.
+      # rubocop:disable Layout/MultilineMethodCallIndentation
+      expect do
         brew "bottle",
              "--merge",
              "--write",
              "#{TEST_TMPDIR}/testball-1.0.arm64_big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.catalina.bottle.json"
-      }.to output(Regexp.new(<<~'EOS')).to_stdout
+      end.to output(Regexp.new(<<~'EOS')).to_stdout
         ==> testball
           bottle do
             sha256 cellar: :any_skip_relocation, arm64_big_sur: "8f9aecd233463da6a4ea55f5f88fc5841718c013f3e2a7941350d6130f1dc149"
@@ -104,6 +132,7 @@ describe "brew bottle" do
       EOS
       .and not_to_output.to_stderr
       .and be_a_success
+      # rubocop:enable Layout/MultilineMethodCallIndentation
 
       expect((core_tap.path/"Formula/testball.rb").read).to eq <<~EOS
         class Testball < Formula
@@ -139,7 +168,7 @@ describe "brew bottle" do
 
     it "replaces the bottle block in a formula that already has a bottle block" do
       core_tap.path.cd do
-        system "git", "init"
+        system "git", "-c", "init.defaultBranch=master", "init"
         setup_test_formula "testball", bottle_block: <<~EOS
 
           bottle do
@@ -152,14 +181,16 @@ describe "brew bottle" do
         system "git", "commit", "-m", "testball 0.1"
       end
 
-      expect {
+      # RuboCop would align the `.and` with `.to_stdout` which is too floaty.
+      # rubocop:disable Layout/MultilineMethodCallIndentation
+      expect do
         brew "bottle",
              "--merge",
              "--write",
              "#{TEST_TMPDIR}/testball-1.0.arm64_big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.catalina.bottle.json"
-      }.to output(Regexp.new(<<~'EOS')).to_stdout
+      end.to output(Regexp.new(<<~'EOS')).to_stdout
         ==> testball
           bottle do
             sha256 cellar: :any_skip_relocation, arm64_big_sur: "8f9aecd233463da6a4ea55f5f88fc5841718c013f3e2a7941350d6130f1dc149"
@@ -171,6 +202,7 @@ describe "brew bottle" do
       EOS
       .and not_to_output.to_stderr
       .and be_a_success
+      # rubocop:enable Layout/MultilineMethodCallIndentation
 
       expect((core_tap.path/"Formula/testball.rb").read).to eq <<~EOS
         class Testball < Formula
@@ -206,7 +238,7 @@ describe "brew bottle" do
 
     it "updates the bottle block in a formula that already has a bottle block when using --keep-old" do
       core_tap.path.cd do
-        system "git", "init"
+        system "git", "-c", "init.defaultBranch=master", "init"
         setup_test_formula "testball", bottle_block: <<~EOS
 
           bottle do
@@ -217,7 +249,9 @@ describe "brew bottle" do
         system "git", "commit", "-m", "testball 0.1"
       end
 
-      expect {
+      # RuboCop would align the `.and` with `.to_stdout` which is too floaty.
+      # rubocop:disable Layout/MultilineMethodCallIndentation
+      expect do
         brew "bottle",
              "--merge",
              "--write",
@@ -225,7 +259,7 @@ describe "brew bottle" do
              "#{TEST_TMPDIR}/testball-1.0.arm64_big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.big_sur.bottle.json",
              "#{TEST_TMPDIR}/testball-1.0.catalina.bottle.json"
-      }.to output(Regexp.new(<<~'EOS')).to_stdout
+      end.to output(Regexp.new(<<~'EOS')).to_stdout
         ==> testball
           bottle do
             sha256 cellar: :any_skip_relocation, arm64_big_sur: "8f9aecd233463da6a4ea55f5f88fc5841718c013f3e2a7941350d6130f1dc149"
@@ -238,6 +272,7 @@ describe "brew bottle" do
       EOS
       .and not_to_output.to_stderr
       .and be_a_success
+      # rubocop:enable Layout/MultilineMethodCallIndentation
 
       expect((core_tap.path/"Formula/testball.rb").read).to eq <<~EOS
         class Testball < Formula
@@ -273,10 +308,10 @@ describe "brew bottle" do
     end
   end
 
-  describe Homebrew do
-    subject(:homebrew) { described_class }
+  describe "bottle_cmd" do
+    subject(:homebrew) { described_class.new(["foo"]) }
 
-    let(:hello_hash_big_sur) {
+    let(:hello_hash_big_sur) do
       JSON.parse stub_hash(
         name:           "hello",
         version:        "1.0",
@@ -287,8 +322,8 @@ describe "brew bottle" do
         local_filename: "hello--1.0.big_sur.bottle.tar.gz",
         sha256:         "a0af7dcbb5c83f6f3f7ecd507c2d352c1a018f894d51ad241ce8492fa598010f",
       )
-    }
-    let(:hello_hash_catalina) {
+    end
+    let(:hello_hash_catalina) do
       JSON.parse stub_hash(
         name:           "hello",
         version:        "1.0",
@@ -299,8 +334,8 @@ describe "brew bottle" do
         local_filename: "hello--1.0.catalina.bottle.tar.gz",
         sha256:         "5334dd344986e46b2aa4f0471cac7b0914bd7de7cb890a34415771788d03f2ac",
       )
-    }
-    let(:unzip_hash_big_sur) {
+    end
+    let(:unzip_hash_big_sur) do
       JSON.parse stub_hash(
         name:           "unzip",
         version:        "2.0",
@@ -311,8 +346,8 @@ describe "brew bottle" do
         local_filename: "unzip--2.0.big_sur.bottle.tar.gz",
         sha256:         "16cf230afdfcb6306c208d169549cf8773c831c8653d2c852315a048960d7e72",
       )
-    }
-    let(:unzip_hash_catalina) {
+    end
+    let(:unzip_hash_catalina) do
       JSON.parse stub_hash(
         name:           "unzip",
         version:        "2.0",
@@ -323,7 +358,7 @@ describe "brew bottle" do
         local_filename: "unzip--2.0.catalina.bottle.tar.gz",
         sha256:         "d9cc50eec8ac243148a121049c236cba06af4a0b1156ab397d0a2850aa79c137",
       )
-    }
+    end
 
     specify "::parse_json_files" do
       Tempfile.open("hello--1.0.big_sur.bottle.json") do |f|
@@ -502,11 +537,11 @@ describe "brew bottle" do
         bottle.sha256(catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e")
 
         expect(homebrew.bottle_output(bottle, nil)).to eq(
-          <<~RUBY.indent(2),
-            bottle do
-              root_url "https://example.com"
-              sha256 catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e"
-            end
+          <<-RUBY,
+  bottle do
+    root_url "https://example.com"
+    sha256 catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e"
+  end
           RUBY
         )
       end
@@ -517,41 +552,15 @@ describe "brew bottle" do
         bottle.sha256(catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e")
 
         expect(homebrew.bottle_output(bottle, "ExampleStrategy")).to eq(
-          <<~RUBY.indent(2),
-            bottle do
-              root_url "https://example.com",
-                using: ExampleStrategy
-              sha256 catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e"
-            end
+          <<-RUBY,
+  bottle do
+    root_url "https://example.com",
+      using: ExampleStrategy
+    sha256 catalina: "109c0cb581a7b5d84da36d84b221fb9dd0f8a927b3044d82611791c9907e202e"
+  end
           RUBY
         )
       end
     end
   end
-end
-
-def stub_hash(parameters)
-  <<~EOS
-    {
-      "#{parameters[:name]}":{
-         "formula":{
-            "pkg_version":"#{parameters[:version]}",
-            "path":"#{parameters[:path]}"
-         },
-         "bottle":{
-            "root_url":"#{parameters[:root_url] || HOMEBREW_BOTTLE_DEFAULT_DOMAIN}",
-            "prefix":"/usr/local",
-            "cellar":"#{parameters[:cellar]}",
-            "rebuild":0,
-            "tags":{
-               "#{parameters[:os]}":{
-                  "filename":"#{parameters[:filename]}",
-                  "local_filename":"#{parameters[:local_filename]}",
-                  "sha256":"#{parameters[:sha256]}"
-               }
-            }
-         }
-      }
-    }
-  EOS
 end

@@ -1,11 +1,9 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "monitor"
 
 # Module for querying the current execution context.
-#
-# @api private
 module Context
   extend MonitorMixin
 
@@ -33,33 +31,39 @@ module Context
       @verbose = verbose
     end
 
+    sig { returns(T::Boolean) }
     def debug?
       @debug == true
     end
 
+    sig { returns(T::Boolean) }
     def quiet?
       @quiet == true
     end
 
+    sig { returns(T::Boolean) }
     def verbose?
       @verbose == true
     end
   end
 
+  sig { returns(T::Boolean) }
   def debug?
     Context.current.debug?
   end
 
+  sig { returns(T::Boolean) }
   def quiet?
     Context.current.quiet?
   end
 
+  sig { returns(T::Boolean) }
   def verbose?
     Context.current.verbose?
   end
 
   def with_context(**options)
-    old_context = Thread.current[:context]
+    old_context = Context.current
 
     new_context = ContextStruct.new(
       debug:   options.fetch(:debug, old_context&.debug?),
@@ -69,8 +73,10 @@ module Context
 
     Thread.current[:context] = new_context
 
-    yield
-  ensure
-    Thread.current[:context] = old_context
+    begin
+      yield
+    ensure
+      Thread.current[:context] = old_context
+    end
   end
 end

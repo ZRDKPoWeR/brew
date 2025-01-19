@@ -1,16 +1,16 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cmd/shared_examples/args_parse"
+require "dev-cmd/create"
 
-describe "brew create" do
+RSpec.describe Homebrew::DevCmd::Create do
   let(:url) { "file://#{TEST_FIXTURE_DIR}/tarballs/testball-0.1.tbz" }
-  let(:formula_file) { CoreTap.new.formula_dir/"testball.rb" }
+  let(:formula_file) { CoreTap.instance.new_formula_path("testball") }
 
   it_behaves_like "parseable arguments"
 
   it "creates a new Formula file for a given URL", :integration_test do
-    brew "create", url, "HOMEBREW_EDITOR" => "/bin/cat"
+    brew "create", "--set-name=Testball", url, "HOMEBREW_EDITOR" => "/bin/cat"
 
     expect(formula_file).to exist
     expect(formula_file.read).to match(%Q(sha256 "#{TESTBALL_SHA256}"))

@@ -1,4 +1,4 @@
-# typed: false
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 module Hardware
@@ -18,7 +18,7 @@ module Hardware
         return :dunno unless intel?
 
         # See https://software.intel.com/en-us/articles/intel-architecture-and-processor-identification-with-cpuid-model-and-family-numbers
-        # and https://github.com/llvm-mirror/llvm/blob/HEAD/lib/Support/Host.cpp
+        # and https://github.com/llvm/llvm-project/blob/main/llvm/lib/TargetParser/Host.cpp
         # and https://en.wikipedia.org/wiki/List_of_Intel_CPU_microarchitectures#Roadmap
         vendor_id = cpuinfo[/^vendor_id\s*: (.*)/, 1]
         cpu_family = cpuinfo[/^cpu family\s*: ([0-9]+)/, 1].to_i
@@ -28,7 +28,7 @@ module Hardware
         when "GenuineIntel"
           intel_family(cpu_family, cpu_model)
         when "AuthenticAMD"
-          amd_family(cpu_family)
+          amd_family(cpu_family, cpu_model)
         end || unknown
       end
 
@@ -42,7 +42,7 @@ module Hardware
             :sandybridge
           when 0x25, 0x2c, 0x2f
             :westmere
-          when 0x1e, 0x1a, 0x2e
+          when 0x1a, 0x1e, 0x1f, 0x2e
             :nehalem
           when 0x17, 0x1d
             :penryn
@@ -56,12 +56,26 @@ module Hardware
             :haswell
           when 0x3d, 0x47, 0x4f, 0x56
             :broadwell
-          when 0x4e, 0x55, 0x5e, 0x8e, 0x9e
+          when 0x4e, 0x5e, 0x8e, 0x9e, 0xa5, 0xa6
             :skylake
           when 0x66
             :cannonlake
           when 0x6a, 0x6c, 0x7d, 0x7e
             :icelake
+          when 0xa7
+            :rocketlake
+          when 0x8c, 0x8d
+            :tigerlake
+          when 0x97, 0x9a, 0xbe, 0xb7, 0xba, 0xbf, 0xaa, 0xac
+            :alderlake
+          when 0xc5, 0xb5, 0xc6, 0xbd
+            :arrowlake
+          when 0xcc
+            :pantherlake
+          when 0xad, 0xae
+            :graniterapids
+          when 0xcf, 0x8f
+            :sapphirerapids
           end
         when 0x0f
           case cpu_model
@@ -73,7 +87,7 @@ module Hardware
         end
       end
 
-      def amd_family(family)
+      def amd_family(family, cpu_model)
         case family
         when 0x06
           :amd_k7
@@ -92,9 +106,21 @@ module Hardware
         when 0x16
           :jaguar
         when 0x17
-          :zen
+          case cpu_model
+          when 0x10..0x2f
+            :zen
+          when 0x30..0x3f, 0x47, 0x60..0x7f, 0x84..0x87, 0x90..0xaf
+            :zen2
+          end
         when 0x19
-          :zen3
+          case cpu_model
+          when ..0x0f, 0x20..0x5f
+            :zen3
+          when 0x10..0x1f, 0x60..0x7f, 0xa0..0xaf
+            :zen4
+          end
+        when 0x1a
+          :zen5
         end
       end
 
@@ -111,7 +137,10 @@ module Hardware
       end
 
       %w[aes altivec avx avx2 lm ssse3 sse4_2].each do |flag|
-        define_method("#{flag}?") { flags.include? flag }
+        define_method(:"#{flag}?") do
+          T.bind(self, T.class_of(Hardware::CPU))
+          flags.include? flag
+        end
       end
 
       def sse3?

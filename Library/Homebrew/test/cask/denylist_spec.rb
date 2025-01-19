@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cask/denylist"
 
-describe Cask::Denylist, :cask do
+RSpec.describe Cask::Denylist, :cask do
   describe "::reason" do
     matcher :disallow do |name|
       match do |expected|

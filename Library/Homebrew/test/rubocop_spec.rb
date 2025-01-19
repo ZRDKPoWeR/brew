@@ -1,13 +1,16 @@
-# typed: false
 # frozen_string_literal: true
 
 require "open3"
 
-describe "RuboCop" do
+RSpec.describe "RuboCop" do
   context "when calling `rubocop` outside of the Homebrew environment" do
     before do
       ENV.each_key do |key|
-        ENV.delete(key) if key.start_with?("HOMEBREW_")
+        allowlist = %w[
+          HOMEBREW_TESTS
+          HOMEBREW_USE_RUBY_FROM_PATH
+        ]
+        ENV.delete(key) if key.start_with?("HOMEBREW_") && allowlist.exclude?(key)
       end
 
       ENV["XDG_CACHE_HOME"] = (HOMEBREW_CACHE.realpath/"style").to_s

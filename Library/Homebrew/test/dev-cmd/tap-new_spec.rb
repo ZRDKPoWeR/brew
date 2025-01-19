@@ -1,9 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cmd/shared_examples/args_parse"
+require "dev-cmd/tap-new"
 
-describe "brew tap-new" do
+RSpec.describe Homebrew::DevCmd::TapNew do
   it_behaves_like "parseable arguments"
 
   it "initializes a new tap with a README file and GitHub Actions CI", :integration_test do

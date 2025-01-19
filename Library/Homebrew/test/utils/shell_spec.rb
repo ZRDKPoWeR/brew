@@ -1,9 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "utils/shell"
 
-describe Utils::Shell do
+RSpec.describe Utils::Shell do
   describe "::profile" do
     it "returns ~/.profile by default" do
       ENV["SHELL"] = "/bin/another_shell"
@@ -22,13 +21,13 @@ describe Utils::Shell do
 
     it "returns /tmp/.zshrc for Zsh if ZDOTDIR is /tmp" do
       ENV["SHELL"] = "/bin/zsh"
-      ENV["ZDOTDIR"] = "/tmp"
+      ENV["HOMEBREW_ZDOTDIR"] = "/tmp"
       expect(described_class.profile).to eq("/tmp/.zshrc")
     end
 
     it "returns ~/.zshrc for Zsh" do
       ENV["SHELL"] = "/bin/zsh"
-      ENV["ZDOTDIR"] = nil
+      ENV["HOMEBREW_ZDOTDIR"] = nil
       expect(described_class.profile).to eq("~/.zshrc")
     end
 
@@ -56,9 +55,9 @@ describe Utils::Shell do
     end
 
     it "returns nil when input is invalid" do
-      expect(described_class.from_path("")).to be nil
-      expect(described_class.from_path("@@@@@@")).to be nil
-      expect(described_class.from_path("invalid_shell-4.2")).to be nil
+      expect(described_class.from_path("")).to be_nil
+      expect(described_class.from_path("@@@@@@")).to be_nil
+      expect(described_class.from_path("invalid_shell-4.2")).to be_nil
     end
   end
 
@@ -73,7 +72,7 @@ describe Utils::Shell do
   specify "::csh_quote" do
     expect(described_class.send(:csh_quote, "")).to eq("''")
     expect(described_class.send(:csh_quote, "\\")).to eq("\\\\")
-    # NOTE: this test is different than for sh
+    # NOTE: This test is different than for `sh`.
     expect(described_class.send(:csh_quote, "\n")).to eq("'\\\n'")
     expect(described_class.send(:csh_quote, "$")).to eq("\\$")
     expect(described_class.send(:csh_quote, "word")).to eq("word")
@@ -85,20 +84,20 @@ describe Utils::Shell do
     it "supports tcsh" do
       ENV["SHELL"] = "/bin/tcsh"
       expect(described_class.prepend_path_in_profile(path))
-        .to eq("echo 'setenv PATH #{path}:$PATH' >> #{shell_profile}")
+        .to eq("echo 'setenv PATH #{path}:$PATH' >> #{described_class.profile}")
     end
 
     it "supports Bash" do
       ENV["SHELL"] = "/bin/bash"
       expect(described_class.prepend_path_in_profile(path))
-        .to eq("echo 'export PATH=\"#{path}:$PATH\"' >> #{shell_profile}")
+        .to eq("echo 'export PATH=\"#{path}:$PATH\"' >> #{described_class.profile}")
     end
 
     it "supports fish" do
       ENV["SHELL"] = "/usr/local/bin/fish"
       ENV["fish_user_paths"] = "/some/path"
       expect(described_class.prepend_path_in_profile(path))
-        .to eq("echo 'fish_add_path #{path}' >> #{shell_profile}")
+        .to eq("fish_add_path #{path}")
     end
   end
 end

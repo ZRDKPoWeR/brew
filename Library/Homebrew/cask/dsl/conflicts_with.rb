@@ -1,16 +1,12 @@
-# typed: false
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "delegate"
-
-require "extend/hash_validator"
-using HashValidator
+require "extend/hash/keys"
 
 module Cask
   class DSL
     # Class corresponding to the `conflicts_with` stanza.
-    #
-    # @api private
     class ConflictsWith < SimpleDelegator
       VALID_KEYS = [
         :formula,
@@ -22,16 +18,16 @@ module Cask
       ].freeze
 
       def initialize(**options)
-        options.assert_valid_keys!(*VALID_KEYS)
+        options.assert_valid_keys(*VALID_KEYS)
 
-        conflicts = options.transform_values { |v| Set.new(Array(v)) }
+        conflicts = options.transform_values { |v| Set.new(Kernel.Array(v)) }
         conflicts.default = Set.new
 
         super(conflicts)
       end
 
       def to_json(generator)
-        transform_values(&:to_a).to_json(generator)
+        __getobj__.transform_values(&:to_a).to_json(generator)
       end
     end
   end

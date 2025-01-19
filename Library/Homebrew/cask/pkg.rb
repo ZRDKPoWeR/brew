@@ -1,15 +1,11 @@
-# typed: true
+# typed: true # rubocop:todo Sorbet/StrictSigil
 # frozen_string_literal: true
 
 require "cask/macos"
 
 module Cask
   # Helper class for uninstalling `.pkg` installers.
-  #
-  # @api private
   class Pkg
-    extend T::Sig
-
     sig { params(regexp: String, command: T.class_of(SystemCommand)).returns(T::Array[Pkg]) }
     def self.all_matching(regexp, command)
       command.run("/usr/sbin/pkgutil", args: ["--pkgs=#{regexp}"]).stdout.split("\n").map do |package_id|
@@ -32,9 +28,10 @@ module Cask
         odebug "Deleting pkg files"
         @command.run!(
           "/usr/bin/xargs",
-          args:  ["-0", "--", "/bin/rm", "--"],
-          input: pkgutil_bom_files.join("\0"),
-          sudo:  true,
+          args:         ["-0", "--", "/bin/rm", "--"],
+          input:        pkgutil_bom_files.join("\0"),
+          sudo:         true,
+          sudo_as_root: true,
         )
       end
 
@@ -42,9 +39,10 @@ module Cask
         odebug "Deleting pkg symlinks and special files"
         @command.run!(
           "/usr/bin/xargs",
-          args:  ["-0", "--", "/bin/rm", "--"],
-          input: pkgutil_bom_specials.join("\0"),
-          sudo:  true,
+          args:         ["-0", "--", "/bin/rm", "--"],
+          input:        pkgutil_bom_specials.join("\0"),
+          sudo:         true,
+          sudo_as_root: true,
         )
       end
 
@@ -61,7 +59,12 @@ module Cask
     sig { void }
     def forget
       odebug "Unregistering pkg receipt (aka forgetting)"
-      @command.run!("/usr/sbin/pkgutil", args: ["--forget", package_id], sudo: true)
+      @command.run!(
+        "/usr/sbin/pkgutil",
+        args:         ["--forget", package_id],
+        sudo:         true,
+        sudo_as_root: true,
+      )
     end
 
     sig { returns(T::Array[Pathname]) }
@@ -71,7 +74,7 @@ module Cask
 
     sig { returns(T::Array[Pathname]) }
     def pkgutil_bom_specials
-      @pkgutil_bom_specials ||= pkgutil_bom_all.select(&method(:special?))
+      @pkgutil_bom_specials ||= pkgutil_bom_all.select { special?(_1) }
     end
 
     sig { returns(T::Array[Pathname]) }
@@ -85,7 +88,7 @@ module Cask
                                    .stdout
                                    .split("\n")
                                    .map { |path| root.join(path) }
-                                   .reject(&MacOS.public_method(:undeletable?))
+                                   .reject { MacOS.undeletable?(_1) }
     end
 
     sig { returns(Pathname) }
@@ -114,9 +117,10 @@ module Cask
     def rmdir(path)
       @command.run!(
         "/usr/bin/xargs",
-        args:  ["-0", "--", RMDIR_SH.to_s],
-        input: Array(path).join("\0"),
-        sudo:  true,
+        args:         ["-0", "--", RMDIR_SH.to_s],
+        input:        Array(path).join("\0"),
+        sudo:         true,
+        sudo_as_root: true,
       )
     end
 

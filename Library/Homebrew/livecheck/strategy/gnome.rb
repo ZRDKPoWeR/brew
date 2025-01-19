@@ -1,4 +1,4 @@
-# typed: true
+# typed: strict
 # frozen_string_literal: true
 
 module Homebrew
@@ -15,18 +15,16 @@ module Homebrew
       # Before version 40, GNOME used a version scheme where unstable releases
       # were indicated with a minor that's 90+ or odd. The newer version scheme
       # uses trailing alpha/beta/rc text to identify unstable versions
-      # (e.g., `40.alpha`).
+      # (e.g. `40.alpha`).
       #
       # When a regex isn't provided in a `livecheck` block, the strategy uses
       # a default regex that matches versions which don't include trailing text
-      # after the numeric version (e.g., `40.0` instead of `40.alpha`) and it
+      # after the numeric version (e.g. `40.0` instead of `40.alpha`) and it
       # selectively filters out unstable versions below 40 using the rules for
       # the older version scheme.
       #
       # @api public
       class Gnome
-        extend T::Sig
-
         NICE_NAME = "GNOME"
 
         # The `Regexp` used to determine if the strategy applies to the URL.
@@ -34,7 +32,7 @@ module Homebrew
           ^https?://download\.gnome\.org
           /sources
           /(?<package_name>[^/]+)/ # The GNOME package name
-        }ix.freeze
+        }ix
 
         # Whether the strategy can be applied to the provided URL.
         #
@@ -66,7 +64,7 @@ module Homebrew
           # GNOME archive files seem to use a standard filename format, so we
           # count on the delimiter between the package name and numeric
           # version being a hyphen and the file being a tarball.
-          values[:regex] = /#{regex_name}-(\d+(?:\.\d+)+)\.t/i
+          values[:regex] = /#{regex_name}-(\d+(?:\.\d+)*)\.t/i
 
           values
         end
@@ -81,14 +79,14 @@ module Homebrew
           params(
             url:    String,
             regex:  T.nilable(Regexp),
-            unused: T.nilable(T::Hash[Symbol, T.untyped]),
-            block:  T.untyped,
+            unused: T.untyped,
+            block:  T.nilable(Proc),
           ).returns(T::Hash[Symbol, T.untyped])
         }
         def self.find_versions(url:, regex: nil, **unused, &block)
           generated = generate_input_values(url)
 
-          version_data = T.unsafe(PageMatch).find_versions(
+          version_data = PageMatch.find_versions(
             url:   generated[:url],
             regex: regex || generated[:regex],
             **unused,
@@ -99,7 +97,11 @@ module Homebrew
             # Filter out unstable versions using the old version scheme where
             # the major version is below 40.
             version_data[:matches].reject! do |_, version|
-              version.major < 40 && (version.minor >= 90 || version.minor.to_i.odd?)
+              next if version.major >= 40
+              next if version.minor.blank?
+
+              (version.minor.to_i.odd? || version.minor >= 90) ||
+                (version.patch.present? && version.patch >= 90)
             end
           end
 

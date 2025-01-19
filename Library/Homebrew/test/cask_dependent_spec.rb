@@ -1,10 +1,9 @@
-# typed: false
 # frozen_string_literal: true
 
 require "cask/cask_loader"
 require "cask_dependent"
 
-describe CaskDependent, :needs_macos do
+RSpec.describe CaskDependent, :needs_macos do
   subject(:dependent) { described_class.new test_cask }
 
   let :test_cask do

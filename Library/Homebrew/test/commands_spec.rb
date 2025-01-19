@@ -1,8 +1,8 @@
-# typed: false
 # frozen_string_literal: true
 
 require "commands"
 
+# These shared contexts starting with `when` don't make sense.
 RSpec.shared_context "custom internal commands" do # rubocop:disable RSpec/ContextWording
   let(:cmds) do
     [
@@ -27,7 +27,7 @@ RSpec.shared_context "custom internal commands" do # rubocop:disable RSpec/Conte
   end
 end
 
-describe Commands do
+RSpec.describe Commands do
   include_context "custom internal commands"
 
   specify "::internal_commands" do
@@ -54,7 +54,7 @@ describe Commands do
 
       FileUtils.touch "#{dir}/brew-t4"
 
-      allow(Tap).to receive(:cmd_directories).and_return([dir])
+      allow(described_class).to receive(:tap_cmd_directories).and_return([dir])
 
       cmds = described_class.external_commands
 
@@ -70,7 +70,7 @@ describe Commands do
     specify "returns the path for an internal command" do
       expect(described_class.path("rbcmd")).to eq(HOMEBREW_LIBRARY_PATH/"cmd/rbcmd.rb")
       expect(described_class.path("shcmd")).to eq(HOMEBREW_LIBRARY_PATH/"cmd/shcmd.sh")
-      expect(described_class.path("idontexist1234")).to be nil
+      expect(described_class.path("idontexist1234")).to be_nil
     end
 
     specify "returns the path for an internal developer-command" do
