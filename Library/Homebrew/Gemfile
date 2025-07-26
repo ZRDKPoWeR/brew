@@ -29,14 +29,14 @@ group :sorbet, optional: true do
   gem "rspec-sorbet", require: false
   gem "sorbet", require: false
   gem "sorbet-runtime", require: false
-  gem "tapioca", require: false
+  gem "tapioca", ">= 0.5.5", require: false
 end
 
 # vendored gems
 gem "activesupport"
 gem "concurrent-ruby"
 gem "did_you_mean" # remove when HOMEBREW_REQUIRED_RUBY_VERSION >= 2.7
-gem "mechanize"
+gem "mechanize", ">= 2.8.4"
 gem "patchelf"
 gem "plist"
 gem "rubocop-performance"
